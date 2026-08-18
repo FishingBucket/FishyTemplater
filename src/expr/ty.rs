@@ -1,6 +1,8 @@
-use std::{collections::HashMap, fmt::Display};
+use std::{collections::HashMap, fmt::Display as DisplayTrait};
+use derive_more::Display;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Display, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[display("{0}ty", self.0)]
 pub struct TypeID(usize);
 
 #[derive(Debug, Clone)]
@@ -38,12 +40,13 @@ pub enum Type {
         params: Vec<Box<Type>>,
         ret: Box<Type>
     },
-    Object(ObjectInfo),
+    Object(TypeID),
+    Union(Vec<Type>),
     Unknown
 }
 
 
-impl Display for Type {
+impl DisplayTrait for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Type::Int => write!(f, "int"),
@@ -62,6 +65,7 @@ impl Display for Type {
                 )
             },
             Type::Object(object_info) => write!(f, "{}", object_info),
+            Type::Union(types) => write!(f, "{}", types.iter().map(|t| format!("{}", t)).collect::<Vec<String>>().join(" | ")),
             Type::Unknown => write!(f, "unknown"),
         }
     }
@@ -74,7 +78,7 @@ pub struct ObjectInfo {
     pub proto: TypeID
 }
 
-impl Display for ObjectInfo {
+impl DisplayTrait for ObjectInfo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut parts: Vec<String> = Vec::with_capacity(3 + self.fields.len());
         parts.push("{".to_string());
