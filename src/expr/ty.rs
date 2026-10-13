@@ -1,5 +1,5 @@
-use std::{collections::HashMap, fmt::Display as DisplayTrait};
 use derive_more::Display;
+use std::{collections::HashMap, fmt::Display as DisplayTrait};
 
 #[derive(Display, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[display("{0}ty", self.0)]
@@ -7,12 +7,14 @@ pub struct TypeID(usize);
 
 #[derive(Debug, Clone)]
 pub struct TypeArena {
-    types: HashMap<TypeID, Type>
+    types: HashMap<TypeID, Type>,
 }
 
 impl TypeArena {
     pub fn new() -> TypeArena {
-        TypeArena { types: HashMap::new() }
+        TypeArena {
+            types: HashMap::new(),
+        }
     }
 
     pub fn insert(&mut self, ty: Type) -> TypeID {
@@ -38,13 +40,12 @@ pub enum Type {
     Function {
         this: Option<Box<Type>>,
         params: Vec<Box<Type>>,
-        ret: Box<Type>
+        ret: Box<Type>,
     },
     Object(TypeID),
     Union(Vec<Type>),
-    Unknown
+    Unknown,
 }
-
 
 impl DisplayTrait for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -56,26 +57,41 @@ impl DisplayTrait for Type {
             Type::None => write!(f, "none"),
             Type::Array(ty_box) => write!(f, "list[{0}]", ty_box.as_ref()),
             Type::Any => write!(f, "any"),
-            Type::Function { this: _, params, ret } => {
+            Type::Function {
+                this: _,
+                params,
+                ret,
+            } => {
                 write!(
                     f,
                     "({0}) -> {1}",
-                    params.iter().map(|b| format!("{}", b.as_ref())).collect::<Vec<String>>().join(", "),
+                    params
+                        .iter()
+                        .map(|b| format!("{}", b.as_ref()))
+                        .collect::<Vec<String>>()
+                        .join(", "),
                     ret
                 )
-            },
+            }
             Type::Object(object_info) => write!(f, "{}", object_info),
-            Type::Union(types) => write!(f, "{}", types.iter().map(|t| format!("{}", t)).collect::<Vec<String>>().join(" | ")),
+            Type::Union(types) => write!(
+                f,
+                "{}",
+                types
+                    .iter()
+                    .map(|t| format!("{}", t))
+                    .collect::<Vec<String>>()
+                    .join(" | ")
+            ),
             Type::Unknown => write!(f, "unknown"),
         }
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ObjectInfo {
     pub fields: HashMap<String, Box<Type>>,
-    pub proto: TypeID
+    pub proto: TypeID,
 }
 
 impl DisplayTrait for ObjectInfo {

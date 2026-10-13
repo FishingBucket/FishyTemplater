@@ -1,17 +1,12 @@
-use std::{fmt::Display, ops::Add};
+use std::ops::Add;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+use derive_more::Display;
+
+#[derive(Display, Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
+#[display("{start}:{end}")]
 pub struct Span {
-    pub start: usize,
-    pub end: usize
-}
-
-impl Span {
-    pub fn new(start: usize, end: usize) -> Span {
-        Span {
-            start, end
-        }
-    }
+    start: usize,
+    end: usize,
 }
 
 impl Add for Span {
@@ -20,13 +15,17 @@ impl Add for Span {
     fn add(self, rhs: Self) -> Self::Output {
         Span {
             start: self.start.min(rhs.start),
-            end: self.end.max(rhs.end)
+            end: self.end.max(rhs.end),
         }
     }
 }
 
-impl Display for Span {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{0}:{1}", self.start, self.end)
+impl Span {
+    pub fn new(start: usize, end: usize) -> Span {
+        Span { start, end }
+    }
+
+    pub fn slice<'a>(self, string: &'a String) -> &'a str {
+        &string[self.start..self.end]
     }
 }

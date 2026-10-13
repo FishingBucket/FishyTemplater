@@ -1,4 +1,4 @@
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
 use derive_more::Display;
 
@@ -8,7 +8,7 @@ use super::{ty::Type, value::Value};
 
 pub struct Environment {
     pub variables: VariableTable,
-    pub types: TypeArena
+    pub types: TypeArena,
 }
 
 struct VariableScope(HashMap<String, VariableInfo>);
@@ -63,5 +63,5 @@ impl VariableTable {
 struct VariableInfo {
     pub ty: Type,
     pub mutable: bool,
-    pub value: Box<dyn Value>
+    pub value: Box<dyn Value>,
 }
