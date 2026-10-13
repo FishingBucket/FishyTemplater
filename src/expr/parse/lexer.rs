@@ -12,6 +12,7 @@ pub enum TokenType {
     Div,
 
     Que,
+    Colon,
 
     Eqeq,
     Lt,
@@ -20,6 +21,12 @@ pub enum TokenType {
     Geq,
     Neq,
 
+    And,
+    Or,
+    Not,
+
+    Arrow,
+
     LParen,
     RParen,
     LBrack,
@@ -27,9 +34,11 @@ pub enum TokenType {
     LBrace,
     RBrace,
 
+    None,
+    Bool(bool),
+
     Int(i64),
     Float(f64),
-    Bool(bool),
     String(String),
     Ident(String),
 }
@@ -75,6 +84,10 @@ impl Lexer {
         self.code.get(self.index).map(|v| *v)
     }
 
+    fn lookahead(&self, n: usize) -> Option<char> {
+        self.code.get(self.index + n).map(|v| *v)
+    }
+
     fn advance(&mut self) -> Option<char> {
         let current = self.peek();
         if current.is_some() {
@@ -112,11 +125,19 @@ impl Lexer {
             return;
         }
 
+        if self.try_lex_symbol() {
+            return;
+        }
+
         if self.try_lex_number() {
             return;
         }
 
         if self.try_lex_string() {
+            return;
+        }
+
+        if self.try_lex_ident() {
             return;
         }
 
@@ -144,6 +165,124 @@ impl Lexer {
                 }
             }
             _ => false,
+        }
+    }
+
+    fn try_lex_symbol(&mut self) -> bool {
+        if let Some(char) = self.peek() {
+            match char {
+                '+' => {
+                    self.advance();
+                    self.add_token(TokenType::Plus)
+                }
+                '*' => {
+                    self.advance();
+                    self.add_token(TokenType::Star)
+                }
+                '?' => {
+                    self.advance();
+                    self.add_token(TokenType::Que)
+                }
+                ':' => {
+                    self.advance();
+                    self.add_token(TokenType::Colon)
+                }
+                '(' => {
+                    self.advance();
+                    self.add_token(TokenType::LParen)
+                }
+                ')' => {
+                    self.advance();
+                    self.add_token(TokenType::RParen)
+                }
+                '[' => {
+                    self.advance();
+                    self.add_token(TokenType::LBrack)
+                }
+                ']' => {
+                    self.advance();
+                    self.add_token(TokenType::RBrack)
+                }
+                '{' => {
+                    self.advance();
+                    self.add_token(TokenType::LBrace)
+                }
+                '}' => {
+                    self.advance();
+                    self.add_token(TokenType::RBrace)
+                }
+                '!' => match self.lookahead(1) {
+                    Some('=') => {
+                        self.advance(); // !
+                        self.advance(); // =
+                        self.add_token(TokenType::Neq)
+                    }
+                    _ => {
+                        self.advance();
+                        self.add_token(TokenType::Not)
+                    }
+                },
+                '=' => match self.lookahead(1) {
+                    Some('=') => {
+                        self.advance(); // =
+                        self.advance(); // =
+                        self.add_token(TokenType::Eqeq)
+                    }
+                    _ => false,
+                },
+                '>' => match self.lookahead(1) {
+                    Some('=') => {
+                        self.advance(); // >
+                        self.advance(); // =
+                        self.add_token(TokenType::Geq)
+                    }
+                    _ => {
+                        self.advance();
+                        self.add_token(TokenType::Gt)
+                    }
+                },
+                '<' => match self.lookahead(1) {
+                    Some('=') => {
+                        self.advance(); // <
+                        self.advance(); // =
+                        self.add_token(TokenType::Leq)
+                    }
+                    _ => {
+                        self.advance();
+                        self.add_token(TokenType::Lt)
+                    }
+                },
+                '&' => match self.lookahead(1) {
+                    Some('&') => {
+                        self.advance(); // &
+                        self.advance(); // &
+                        self.add_token(TokenType::And)
+                    }
+                    _ => false,
+                },
+                '|' => match self.lookahead(1) {
+                    Some('|') => {
+                        self.advance(); // |
+                        self.advance(); // |
+                        self.add_token(TokenType::Or)
+                    }
+                    _ => false,
+                },
+                '-' => match self.lookahead(1) {
+                    Some('>') => {
+                        self.advance(); // -
+                        self.advance(); // >
+                        self.add_token(TokenType::Arrow)
+                    }
+                    _ => {
+                        self.advance();
+                        self.add_token(TokenType::Minus)
+                    }
+                },
+                _ => false,
+            }
+        } else {
+            false
         }
     }
 
@@ -231,5 +370,48 @@ impl Lexer {
             str.push(char);
         }
         self.add_token(TokenType::Error("Unterminated string".to_string()));
+    }
+
+    fn try_lex_ident(&mut self) -> bool {
+        if let Some(char) = self.peek() {
+            if 'a' <= char && char <= 'z'
+                || 'A' <= char && char <= 'Z'
+                || char == '_'
+                || char == '$'
+            {
+                self.lex_ident();
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    fn lex_ident(&mut self) {
+        while let Some(char) = self.peek() {
+            if 'a' <= char && char <= 'z'
+                || 'A' <= char && char <= 'Z'
+                || '0' <= char && char <= '9'
+                || char == '_'
+                || char == '$'
+            {
+                self.advance();
+            } else {
+                break;
+            }
+        }
+
+        let s = self.selected();
+        if s == "true" {
+            self.add_token(TokenType::Bool(true));
+        } else if s == "false" {
+            self.add_token(TokenType::Bool(false));
+        } else if s == "null" {
+            self.add_token(TokenType::None);
+        } else {
+            self.add_token(TokenType::Ident(s));
+        }
     }
 }

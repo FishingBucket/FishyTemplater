@@ -46,3 +46,51 @@ fn divide_or_comment() {
         ]
     )
 }
+
+#[test]
+fn symbols() {
+    assert_eq!(
+        as_tt_list("+ - * / ? : == < <= >= > != () [] {} && || ! ->"),
+        vec![
+            TokenType::Plus,
+            TokenType::Minus,
+            TokenType::Star,
+            TokenType::Div,
+            TokenType::Que,
+            TokenType::Colon,
+            TokenType::Eqeq,
+            TokenType::Lt,
+            TokenType::Leq,
+            TokenType::Geq,
+            TokenType::Gt,
+            TokenType::Neq,
+            TokenType::LParen,
+            TokenType::RParen,
+            TokenType::LBrack,
+            TokenType::RBrack,
+            TokenType::LBrace,
+            TokenType::RBrace,
+            TokenType::And,
+            TokenType::Or,
+            TokenType::Not,
+            TokenType::Arrow,
+            TokenType::EOF
+        ]
+    )
+}
+
+#[test]
+fn ident() {
+    assert_eq!(
+        as_tt_list("true false null hello $boss o_o"),
+        vec![
+            TokenType::Bool(true),
+            TokenType::Bool(false),
+            TokenType::None,
+            TokenType::Ident("hello".to_string()),
+            TokenType::Ident("$boss".to_string()),
+            TokenType::Ident("o_o".to_string()),
+            TokenType::EOF
+        ]
+    )
+}
