@@ -1,22 +1,25 @@
-use std::ops::Add;
-
 use crate::expr::span::Span;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
     EOF,
     Error(String),
+    Comment(String),
 
     Plus,
     Minus,
     Star,
     Div,
+
+    Que,
+
     Eqeq,
     Lt,
     Leq,
     Gt,
     Geq,
     Neq,
+
     LParen,
     RParen,
     LBrack,
@@ -82,22 +85,20 @@ impl Lexer {
 
     fn skip_ws(&mut self) {
         while let Some(char) = self.peek() {
-            match char {
-                ' ' | '\n' | '\t' | '\r' => {
-                    self.advance();
-                }
-                _ => {
-                    break;
-                }
+            if char.is_whitespace() || char == ' ' || char == '\n' {
+                self.advance();
+            } else {
+                return;
             }
         }
     }
 
-    fn add_token(&mut self, tty: TokenType) {
+    fn add_token(&mut self, tty: TokenType) -> bool {
         self.tokens.push(Token {
             tty,
             span: Span::new(self.pass_start, self.index),
         });
+        true
     }
 
     fn selected(&self) -> String {
@@ -107,8 +108,17 @@ impl Lexer {
 
 impl Lexer {
     fn scan_next(&mut self) {
-        self.try_lex_number();
-        self.try_lex_string();
+        if self.try_lex_divide_or_comment() {
+            return;
+        }
+
+        if self.try_lex_number() {
+            return;
+        }
+
+        if self.try_lex_string() {
+            return;
+        }
 
         if let Some(char) = self.peek() {
             self.add_token(TokenType::Error(
@@ -117,17 +127,36 @@ impl Lexer {
         }
     }
 
-    fn try_lex_number(&mut self) {
+    fn try_lex_divide_or_comment(&mut self) -> bool {
+        match self.peek() {
+            Some('/') => {
+                self.advance();
+                match self.peek() {
+                    Some('/') => {
+                        while let Some(char) = self.advance() {
+                            if char == '\n' {
+                                break;
+                            }
+                        }
+                        self.add_token(TokenType::Comment(self.selected()[2..].trim().to_string()))
+                    }
+                    _ => self.add_token(TokenType::Div),
+                }
+            }
+            _ => false,
+        }
+    }
+
+    fn try_lex_number(&mut self) -> bool {
         if !self.peek().map_or(false, |v| '0' <= v && v <= '9') {
-            return;
+            return false;
         }
 
         let mut has_dot = false;
         while let Some(char) = self.peek() {
             if char == '.' {
                 if has_dot {
-                    self.add_token(TokenType::Error("Invalid number".to_string()));
-                    return;
+                    return self.add_token(TokenType::Error("Invalid number".to_string()));
                 } else {
                     has_dot = true;
                     self.advance();
@@ -141,31 +170,21 @@ impl Lexer {
         if has_dot {
             let res = self.selected().replace("_", "").parse::<f64>();
             if let Ok(f) = res {
-                self.add_token(TokenType::Float(f));
+                self.add_token(TokenType::Float(f))
             } else {
-                self.add_token(TokenType::Error("Invalid number".to_string()));
+                self.add_token(TokenType::Error("Invalid number".to_string()))
             }
         } else {
             let res = self.selected().replace("_", "").parse::<i64>();
             if let Ok(i) = res {
-                self.add_token(TokenType::Int(i));
+                self.add_token(TokenType::Int(i))
             } else {
-                self.add_token(TokenType::Error("Invalid number".to_string()));
+                self.add_token(TokenType::Error("Invalid number".to_string()))
             }
         }
     }
 
-    fn start_string(&self) -> bool {
-        self.peek().map_or(false, |v| {
-            v == '"' || v == '\'' ||
-            v == '\u{00AB}' || // «
-            v == '\u{2018}' || // ‘
-            v == '\u{201C}' || // “
-            v == '\u{2039}' // ‹
-        })
-    }
-
-    fn try_lex_string(&mut self) {
+    fn try_lex_string(&mut self) -> bool {
         if let Some(start_char) = self.peek() {
             let end_quote = match start_char {
                 '"' => Some('"'),
@@ -177,9 +196,11 @@ impl Lexer {
                 _ => None,
             };
             if let Some(end_quo) = end_quote {
-                self.lex_string(end_quo)
+                self.lex_string(end_quo);
+                return true;
             }
         }
+        false
     }
 
     fn lex_string(&mut self, end_quote: char) {

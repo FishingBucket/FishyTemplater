@@ -1,4 +1,4 @@
-use crate::expr::parse::lexer::{Lexer, Token, TokenType};
+use crate::expr::parse::lexer::{Lexer, TokenType};
 
 fn as_tt_list(code: &'static str) -> Vec<TokenType> {
     let s = code.to_string();
@@ -30,4 +30,19 @@ fn strings() {
             TokenType::EOF
         ]
     );
+}
+
+#[test]
+fn divide_or_comment() {
+    assert_eq!(
+        as_tt_list("/ /"),
+        vec![TokenType::Div, TokenType::Div, TokenType::EOF]
+    );
+    assert_eq!(
+        as_tt_list("// hello there"),
+        vec![
+            TokenType::Comment("hello there".to_string()),
+            TokenType::EOF
+        ]
+    )
 }
