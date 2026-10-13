@@ -1,3 +1,5 @@
+use std::ops::Add;
+
 use crate::expr::span::Span;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -105,16 +107,21 @@ impl Lexer {
 
 impl Lexer {
     fn scan_next(&mut self) {
-        if self.start_number() {
-            self.lex_number()
+        self.try_lex_number();
+        self.try_lex_string();
+
+        if let Some(char) = self.peek() {
+            self.add_token(TokenType::Error(
+                format!("Unknown character {}", char).to_string(),
+            ));
         }
     }
 
-    fn start_number(&self) -> bool {
-        self.peek().map_or(false, |v| '0' <= v && v <= '9')
-    }
+    fn try_lex_number(&mut self) {
+        if !self.peek().map_or(false, |v| '0' <= v && v <= '9') {
+            return;
+        }
 
-    fn lex_number(&mut self) {
         let mut has_dot = false;
         while let Some(char) = self.peek() {
             if char == '.' {
@@ -146,5 +153,62 @@ impl Lexer {
                 self.add_token(TokenType::Error("Invalid number".to_string()));
             }
         }
+    }
+
+    fn start_string(&self) -> bool {
+        self.peek().map_or(false, |v| {
+            v == '"' || v == '\'' ||
+            v == '\u{00AB}' || // «
+            v == '\u{2018}' || // ‘
+            v == '\u{201C}' || // “
+            v == '\u{2039}' // ‹
+        })
+    }
+
+    fn try_lex_string(&mut self) {
+        if let Some(start_char) = self.peek() {
+            let end_quote = match start_char {
+                '"' => Some('"'),
+                '\'' => Some('\''),
+                '\u{00AB}' => Some('\u{00BB}'), // «»
+                '\u{2018}' => Some('\u{2019}'), // ‘’
+                '\u{201C}' => Some('\u{201D}'), // “”
+                '\u{2039}' => Some('\u{203A}'), // ‹›
+                _ => None,
+            };
+            if let Some(end_quo) = end_quote {
+                self.lex_string(end_quo)
+            }
+        }
+    }
+
+    fn lex_string(&mut self, end_quote: char) {
+        self.advance(); // skip the start quote character!
+        let mut escaped = false;
+        let mut str = String::new();
+        while let Some(char) = self.advance() {
+            if escaped {
+                str.push(match char {
+                    'n' => '\n',
+                    't' => '\t',
+                    'r' => '\r',
+                    '0' => '\0',
+                    n => n,
+                });
+                escaped = false;
+                continue;
+            }
+            if char == '\\' {
+                escaped = true;
+                continue;
+            }
+            if char == end_quote {
+                self.advance();
+                self.add_token(TokenType::String(str.to_string()));
+                return;
+            }
+            str.push(char);
+        }
+        self.add_token(TokenType::Error("Unterminated string".to_string()));
     }
 }
