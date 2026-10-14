@@ -1,34 +1,32 @@
 use super::span::Span;
 
-pub mod operators {
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-    pub enum Binary {
-        Add,
-        Subtract,
-        Times,
-        Divide,
-        Modulus,
-        Equals,
-        NotEquals,
-        Less,
-        LessEquals,
-        Greater,
-        GreaterEquals,
-        And,
-        Or,
-        In,
-        BinaryAnd,
-        BinaryOr,
-        BinaryXor,
-    }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum BinOp {
+    Add,
+    Subtract,
+    Times,
+    Divide,
+    Modulus,
+    Equals,
+    NotEquals,
+    Less,
+    LessEquals,
+    Greater,
+    GreaterEquals,
+    And,
+    Or,
+    In,
+    BinaryAnd,
+    BinaryOr,
+    BinaryXor,
+}
 
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-    pub enum Unary {
-        Not,
-        BinaryNot,
-        Negative,
-        Positive,
-    }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum UnOp {
+    Not,
+    BinaryNot,
+    Negative,
+    Positive,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -57,11 +55,11 @@ pub enum ExprKind {
     None,
     BinOp {
         left: Box<Expr>,
-        operator: operators::Binary,
+        operator: BinOp,
         right: Box<Expr>,
     },
     UnOp {
-        operator: operators::Unary,
+        operator: UnOp,
         value: Box<Expr>,
     },
     Attribute {
@@ -80,6 +78,10 @@ pub enum ExprKind {
         condition: Box<Expr>,
         branch_true: Box<Expr>,
         branch_false: Box<Expr>,
+    },
+    Arrow {
+        predicate: Box<Expr>,
+        then: Box<Expr>,
     },
     Dice {
         count: Box<Expr>,

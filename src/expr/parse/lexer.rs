@@ -10,6 +10,7 @@ pub enum TokenType {
     Minus,
     Star,
     Div,
+    Mod,
 
     Que,
     Colon,
@@ -24,8 +25,16 @@ pub enum TokenType {
     And,
     Or,
     Not,
+    In,
+
+    BinAnd,
+    BinOr,
+    BinXor,
+    BinNot,
 
     Arrow,
+    Dot,
+    Comma,
 
     LParen,
     RParen,
@@ -187,6 +196,14 @@ impl Lexer {
                     self.advance();
                     self.add_token(TokenType::Colon)
                 }
+                '.' => {
+                    self.advance();
+                    self.add_token(TokenType::Dot)
+                }
+                ',' => {
+                    self.advance();
+                    self.add_token(TokenType::Comma)
+                }
                 '(' => {
                     self.advance();
                     self.add_token(TokenType::LParen)
@@ -210,6 +227,14 @@ impl Lexer {
                 '}' => {
                     self.advance();
                     self.add_token(TokenType::RBrace)
+                }
+                '~' => {
+                    self.advance();
+                    self.add_token(TokenType::BinNot)
+                }
+                '^' => {
+                    self.advance();
+                    self.add_token(TokenType::BinXor)
                 }
                 '!' => match self.lookahead(1) {
                     Some('=') => {
@@ -258,7 +283,10 @@ impl Lexer {
                         self.advance(); // &
                         self.add_token(TokenType::And)
                     }
-                    _ => false,
+                    _ => {
+                        self.advance();
+                        self.add_token(TokenType::BinAnd)
+                    }
                 },
                 '|' => match self.lookahead(1) {
                     Some('|') => {
@@ -266,7 +294,10 @@ impl Lexer {
                         self.advance(); // |
                         self.add_token(TokenType::Or)
                     }
-                    _ => false,
+                    _ => {
+                        self.advance();
+                        self.add_token(TokenType::BinOr)
+                    }
                 },
                 '-' => match self.lookahead(1) {
                     Some('>') => {
@@ -410,6 +441,8 @@ impl Lexer {
             self.add_token(TokenType::Bool(false));
         } else if s == "null" {
             self.add_token(TokenType::None);
+        } else if s == "in" {
+            self.add_token(TokenType::In);
         } else {
             self.add_token(TokenType::Ident(s));
         }

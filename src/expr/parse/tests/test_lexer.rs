@@ -50,7 +50,7 @@ fn divide_or_comment() {
 #[test]
 fn symbols() {
     assert_eq!(
-        as_tt_list("+ - * / ? : == < <= >= > != () [] {} && || ! ->"),
+        as_tt_list("+ - * / ? : == < <= >= > != () [] {} && || ! -> & | ~ ^"),
         vec![
             TokenType::Plus,
             TokenType::Minus,
@@ -74,6 +74,10 @@ fn symbols() {
             TokenType::Or,
             TokenType::Not,
             TokenType::Arrow,
+            TokenType::BinAnd,
+            TokenType::BinOr,
+            TokenType::BinNot,
+            TokenType::BinXor,
             TokenType::EOF
         ]
     )
@@ -82,11 +86,12 @@ fn symbols() {
 #[test]
 fn ident() {
     assert_eq!(
-        as_tt_list("true false null hello $boss o_o"),
+        as_tt_list("true false null in hello $boss o_o"),
         vec![
             TokenType::Bool(true),
             TokenType::Bool(false),
             TokenType::None,
+            TokenType::In,
             TokenType::Ident("hello".to_string()),
             TokenType::Ident("$boss".to_string()),
             TokenType::Ident("o_o".to_string()),
