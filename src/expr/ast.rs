@@ -1,10 +1,7 @@
-use super::{span::Span, ty::Type};
-use derive_more::Display;
+use super::span::Span;
 
 pub mod operators {
-    use derive_more::Display;
-
-    #[derive(Display, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     pub enum Binary {
         Add,
         Subtract,
@@ -25,7 +22,7 @@ pub mod operators {
         BinaryXor,
     }
 
-    #[derive(Display, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     pub enum Unary {
         Not,
         BinaryNot,
@@ -34,69 +31,56 @@ pub mod operators {
     }
 }
 
-#[derive(Display, Debug, Clone, PartialEq)]
-#[display("Expr({data}, {span}, {ty})")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Expr {
     pub data: ExprKind,
     pub span: Span,
-    pub ty: Type,
 }
 
 impl Expr {
-    pub fn new(data: ExprKind, span: Span, ty: Type) -> Expr {
-        Expr { data, span, ty }
+    pub fn new(data: ExprKind, span: Span) -> Expr {
+        Expr { data, span }
     }
 
     pub fn unknown(data: ExprKind, span: Span) -> Expr {
-        Expr {
-            data,
-            span,
-            ty: Type::Unknown,
-        }
+        Expr { data, span }
     }
 }
 
-#[derive(Display, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ExprKind {
     IntLiteral(i64),
     FloatLiteral(f64),
     StringLiteral(String),
     BoolLiteral(bool),
     Ident(String),
-    None(),
-    #[display("({left} {operator} {right})")]
+    None,
     BinOp {
         left: Box<Expr>,
         operator: operators::Binary,
         right: Box<Expr>,
     },
-    #[display("({operator}{value})")]
     UnOp {
         operator: operators::Unary,
         value: Box<Expr>,
     },
-    #[display("({value}.{attribute})")]
     Attribute {
         value: Box<Expr>,
         attribute: String,
     },
-    #[display("({value}[{index}])")]
     Index {
         value: Box<Expr>,
         index: Box<Expr>,
     },
-    #[display("({value}({arguments:?}))")]
     Call {
         value: Box<Expr>,
         arguments: Vec<Expr>,
     },
-    #[display("({condition} ? {branch_true} : {branch_false})")]
     If {
         condition: Box<Expr>,
         branch_true: Box<Expr>,
         branch_false: Box<Expr>,
     },
-    #[display("({count})d({side})")]
     Dice {
         count: Box<Expr>,
         side: Box<Expr>,

@@ -1,12 +1,15 @@
-use std::ops::Add;
+use std::{fmt::Display, ops::Add};
 
-use derive_more::Display;
-
-#[derive(Display, Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
-#[display("{start}:{end}")]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Span {
     start: usize,
     end: usize,
+}
+
+impl Display for Span {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}:{}", self.start, self.end)
+    }
 }
 
 impl Add for Span {
