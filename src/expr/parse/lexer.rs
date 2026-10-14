@@ -188,6 +188,10 @@ impl Lexer {
                     self.advance();
                     self.add_token(TokenType::Star)
                 }
+                '%' => {
+                    self.advance();
+                    self.add_token(TokenType::Mod)
+                }
                 '?' => {
                     self.advance();
                     self.add_token(TokenType::Que)

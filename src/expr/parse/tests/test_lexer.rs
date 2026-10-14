@@ -50,11 +50,12 @@ fn divide_or_comment() {
 #[test]
 fn symbols() {
     assert_eq!(
-        as_tt_list("+ - * / ? : == < <= >= > != () [] {} && || ! -> & | ~ ^"),
+        as_tt_list("+ - * % / ? : == < <= >= > != () [] {} && || ! -> & | ~ ^"),
         vec![
             TokenType::Plus,
             TokenType::Minus,
             TokenType::Star,
+            TokenType::Mod,
             TokenType::Div,
             TokenType::Que,
             TokenType::Colon,
