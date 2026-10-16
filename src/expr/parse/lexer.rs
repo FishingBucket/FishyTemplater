@@ -1,61 +1,7 @@
-use crate::expr::span::Span;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum TokenType {
-    EOF,
-    Error(String),
-    Comment(String),
-
-    Plus,
-    Minus,
-    Star,
-    Div,
-    Mod,
-
-    Que,
-    Colon,
-
-    Eqeq,
-    Lt,
-    Leq,
-    Gt,
-    Geq,
-    Neq,
-
-    And,
-    Or,
-    Not,
-    In,
-
-    BinAnd,
-    BinOr,
-    BinXor,
-    BinNot,
-
-    Arrow,
-    Dot,
-    Comma,
-
-    LParen,
-    RParen,
-    LBrack,
-    RBrack,
-    LBrace,
-    RBrace,
-
-    None,
-    Bool(bool),
-
-    Int(i64),
-    Float(f64),
-    String(String),
-    Ident(String),
-}
-
-pub struct Token {
-    pub tty: TokenType,
-    pub span: Span,
-}
+use crate::expr::{
+    parse::tokens::{Token, TokenType},
+    span::Span,
+};
 
 pub struct Lexer {
     pass_start: usize,
@@ -168,7 +114,7 @@ impl Lexer {
                                 break;
                             }
                         }
-                        self.add_token(TokenType::Comment(self.selected()[2..].trim().to_string()))
+                        true
                     }
                     _ => self.add_token(TokenType::Div),
                 }

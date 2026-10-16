@@ -7,18 +7,22 @@ pub enum BinOp {
     Times,
     Divide,
     Modulus,
+    And,
+    Or,
+    BinaryAnd,
+    BinaryOr,
+    BinaryXor,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum CompOp {
     Equals,
     NotEquals,
     Less,
     LessEquals,
     Greater,
     GreaterEquals,
-    And,
-    Or,
     In,
-    BinaryAnd,
-    BinaryOr,
-    BinaryXor,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -36,11 +40,7 @@ pub struct Expr {
 }
 
 impl Expr {
-    pub fn new(data: ExprKind, span: Span) -> Expr {
-        Expr { data, span }
-    }
-
-    pub fn unknown(data: ExprKind, span: Span) -> Expr {
+    pub fn new(span: Span, data: ExprKind) -> Expr {
         Expr { data, span }
     }
 }
@@ -57,6 +57,11 @@ pub enum ExprKind {
         left: Box<Expr>,
         operator: BinOp,
         right: Box<Expr>,
+    },
+    Compare {
+        left: Box<Expr>,
+        operators: Vec<CompOp>,
+        values: Vec<Expr>,
     },
     UnOp {
         operator: UnOp,
@@ -81,7 +86,7 @@ pub enum ExprKind {
     },
     Arrow {
         predicate: Box<Expr>,
-        then: Box<Expr>,
+        then: Vec<Expr>,
     },
     Dice {
         count: Box<Expr>,
