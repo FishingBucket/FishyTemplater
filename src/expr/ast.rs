@@ -51,7 +51,7 @@ pub enum ExprKind {
     FloatLiteral(f64),
     StringLiteral(String),
     BoolLiteral(bool),
-    Ident(String),
+    Variable(String),
     None,
     BinOp {
         left: Box<Expr>,

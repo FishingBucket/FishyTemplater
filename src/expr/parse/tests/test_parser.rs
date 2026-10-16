@@ -2,47 +2,57 @@ use assert_struct::assert_struct;
 
 use crate::expr::{
     ast::{BinOp, CompOp, Expr, ExprKind, UnOp},
-    parse::{lexer::Lexer, parser::Parser},
+    parse::{
+        lexer::Lexer,
+        parser::{ParseError, Parser},
+    },
 };
 
-fn parse(code: &'static str) -> Expr {
+fn parse(code: &'static str) -> Result<Expr, ParseError> {
     let s = code.to_string();
     let mut lexer = Lexer::new(&s);
     lexer.scan();
     let tokens = lexer.get_tokens();
     let mut parser = Parser::new(tokens);
-    parser.parse_expr().unwrap()
+    parser.arrow()
 }
 
 #[test]
 fn parse_basic_atoms() {
     assert_struct!(
         parse("3.25"),
-        Expr {
+        Ok(Expr {
             data: ExprKind::FloatLiteral(3.25),
             ..
-        }
+        })
     );
     assert_struct!(
         parse("3"),
-        Expr {
+        Ok(Expr {
             data: ExprKind::IntLiteral(3),
             ..
-        }
+        })
     );
     assert_struct!(
         parse("true"),
-        Expr {
+        Ok(Expr {
             data: ExprKind::BoolLiteral(true),
             ..
-        }
+        })
     );
     assert_struct!(
         parse("\"false\""),
-        Expr {
+        Ok(Expr {
             data: ExprKind::StringLiteral("false"),
             ..
-        }
+        })
+    );
+    assert_struct!(
+        parse("var"),
+        Ok(Expr {
+            data: ExprKind::Variable("var"),
+            ..
+        })
     );
 }
 
@@ -50,7 +60,7 @@ fn parse_basic_atoms() {
 fn parse_operations() {
     assert_struct!(
         parse("3 + +8"),
-        Expr {
+        Ok(Expr {
             data: ExprKind::BinOp {
                 *left: Expr {
                     data: ExprKind::IntLiteral(3),
@@ -69,11 +79,11 @@ fn parse_operations() {
                 }
             },
             ..
-        }
+        })
     );
     assert_struct!(
         parse("6 / 2 * (1 + 2)"),
-        Expr {
+        Ok(Expr {
             data: ExprKind::BinOp {
                 *left: Expr {
                     data: ExprKind::BinOp {
@@ -106,7 +116,7 @@ fn parse_operations() {
                 }
             },
             ..
-        }
+        })
     )
 }
 
@@ -114,7 +124,7 @@ fn parse_operations() {
 fn comparisons() {
     assert_struct!(
         parse("1 < 2"),
-        Expr {
+        Ok(Expr {
             data: ExprKind::Compare {
                 *left: Expr {
                     data: ExprKind::IntLiteral(1),
@@ -129,11 +139,11 @@ fn comparisons() {
                 ]
             },
             ..
-        }
+        })
     );
     assert_struct!(
         parse("1 < 2 < 3 >= 4"),
-        Expr {
+        Ok(Expr {
             data: ExprKind::Compare {
                 *left: Expr {
                     data: ExprKind::IntLiteral(1),
@@ -156,7 +166,7 @@ fn comparisons() {
                 ]
             },
             ..
-        }
+        })
     );
 }
 
@@ -164,7 +174,7 @@ fn comparisons() {
 fn arrow() {
     assert_struct!(
         parse("true -> false -> \"hello\""),
-        Expr {
+        Ok(Expr {
             data: ExprKind::Arrow {
                 *predicate: Expr {
                     data: ExprKind::BoolLiteral(true),
@@ -182,6 +192,168 @@ fn arrow() {
                 ]
             },
             ..
-        }
+        })
+    )
+}
+
+#[test]
+fn test_ternary() {
+    assert_struct!(
+        parse("1 == 1 ? 'true' : 'false'"),
+        Ok(Expr {
+            data: ExprKind::If {
+                *condition: Expr {
+                    data: ExprKind::Compare {
+                        *left: Expr {
+                            data: ExprKind::IntLiteral(1),
+                            ..
+                        },
+                        operators: [CompOp::Equals],
+                        values: [
+                            Expr {
+                                data: ExprKind::IntLiteral(1),
+                                ..
+                            }
+                        ]
+                    },
+                    ..
+                },
+                *branch_true: Expr {
+                    data: ExprKind::StringLiteral("true"),
+                    ..
+                },
+                *branch_false: Expr {
+                    data: ExprKind::StringLiteral("false"),
+                    ..
+                }
+            },
+            ..
+        })
+    )
+}
+
+#[test]
+fn test_call() {
+    assert_struct!(
+        parse("f(1, 2)"),
+        Ok(Expr {
+            data: ExprKind::Call {
+                *value: Expr {
+                    data: ExprKind::Variable("f"),
+                    ..
+                },
+                arguments: [
+                    Expr {
+                        data: ExprKind::IntLiteral(1),
+                        ..
+                    },
+                    Expr {
+                        data: ExprKind::IntLiteral(2),
+                        ..
+                    }
+                ]
+            },
+            ..
+        })
+    );
+    assert_struct!(
+        parse("f(1,)"),
+        Ok(Expr {
+            data: ExprKind::Call {
+                *value: Expr {
+                    data: ExprKind::Variable("f"),
+                    ..
+                },
+                arguments: [
+                    Expr {
+                        data: ExprKind::IntLiteral(1),
+                        ..
+                    }
+                ]
+            },
+            ..
+        })
+    );
+    assert_struct!(
+        parse("f()"),
+        Ok(Expr {
+            data: ExprKind::Call {
+                *value: Expr {
+                    data: ExprKind::Variable("f"),
+                    ..
+                },
+                arguments: []
+            },
+            ..
+        })
+    );
+}
+
+#[test]
+fn test_index() {
+    assert_struct!(
+        parse("'hello'[1]"),
+        Ok(Expr {
+            data: ExprKind::Index {
+                *value: Expr {
+                    data: ExprKind::StringLiteral("hello"),
+                    ..
+                },
+                *index: Expr {
+                    data: ExprKind::IntLiteral(1),
+                    ..
+                }
+            },
+            ..
+        })
+    )
+}
+
+#[test]
+fn test_attribute() {
+    assert_struct!(
+        parse("foo.bar"),
+        Ok(Expr {
+            data: ExprKind::Attribute {
+                *value: Expr {
+                    data: ExprKind::Variable("foo"),
+                    ..
+                },
+                attribute: "bar"
+            },
+            ..
+        })
+    )
+}
+
+#[test]
+fn test_trail() {
+    assert_struct!(
+        parse("'hello'[1].lower()"),
+        Ok(Expr {
+            data: ExprKind::Call {
+                *value: Expr {
+                    data: ExprKind::Attribute {
+                        *value: Expr {
+                            data: ExprKind::Index {
+                                *value: Expr {
+                                    data: ExprKind::StringLiteral("hello"),
+                                    ..
+                                },
+                                *index: Expr {
+                                    data: ExprKind::IntLiteral(1),
+                                    ..
+                                }
+                            },
+                            ..
+                        },
+                        attribute: "lower"
+                    },
+                    ..
+                },
+                arguments: []
+            },
+            ..
+        })
     )
 }

@@ -30,6 +30,14 @@ fn strings() {
             TokenType::EOF
         ]
     );
+    assert_eq!(
+        as_tt_list("'owo''uwu'"),
+        vec![
+            TokenType::String("owo".to_string()),
+            TokenType::String("uwu".to_string()),
+            TokenType::EOF,
+        ],
+    );
 }
 
 #[test]
@@ -43,7 +51,7 @@ fn divide() {
 #[test]
 fn symbols() {
     assert_eq!(
-        as_tt_list("+ - * % / ? : == < <= >= > != () [] {} && || ! -> & | ~ ^"),
+        as_tt_list("+ - * % / ? : == < <= >= > != () [] {} && || ! -> & | ~ ^ , ."),
         vec![
             TokenType::Plus,
             TokenType::Minus,
@@ -72,6 +80,8 @@ fn symbols() {
             TokenType::BinOr,
             TokenType::BinNot,
             TokenType::BinXor,
+            TokenType::Comma,
+            TokenType::Dot,
             TokenType::EOF
         ]
     )

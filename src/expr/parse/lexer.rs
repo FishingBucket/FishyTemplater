@@ -344,7 +344,6 @@ impl Lexer {
                 continue;
             }
             if char == end_quote {
-                self.advance();
                 self.add_token(TokenType::String(str.to_string()));
                 return;
             }

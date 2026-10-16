@@ -22,8 +22,19 @@ impl Parser {
         }
     }
 
-    pub fn parse_expr(&mut self) -> Result<Expr, ParseError> {
+    pub fn expr(&mut self) -> Result<Expr, ParseError> {
+        let expr = self.parse_expr()?;
+        self.check_end()?;
+        Ok(expr)
+    }
+
+    pub fn arrow(&mut self) -> Result<Expr, ParseError> {
         let expr = self.parse_arrow()?;
+        self.check_end()?;
+        Ok(expr)
+    }
+
+    fn check_end(&self) -> Result<(), ParseError> {
         if let Some(tok) = self.tokens.get(0)
             && tok.tty != TokenType::EOF
         {
@@ -32,7 +43,7 @@ impl Parser {
                 format!("Unexpected token {}", tok.tty),
             ))
         } else {
-            Ok(expr)
+            Ok(())
         }
     }
 }
@@ -117,13 +128,17 @@ macro_rules! maybe_one_of {
 }
 
 impl Parser {
+    fn parse_expr(&mut self) -> Result<Expr, ParseError> {
+        self.parse_if()
+    }
+
     fn parse_arrow(&mut self) -> Result<Expr, ParseError> {
-        let expr = self.parse_or()?;
+        let expr = self.parse_if()?;
         let mut then = Vec::<Expr>::new();
         let mut has = false;
         while let Some(_) = self.maybe(TokenType::Arrow) {
             has = true;
-            let right = self.parse_or()?;
+            let right = self.parse_if()?;
             then.push(right);
         }
         if has {
@@ -132,6 +147,25 @@ impl Parser {
                 ExprKind::Arrow {
                     predicate: Box::new(expr),
                     then,
+                },
+            ))
+        } else {
+            Ok(expr)
+        }
+    }
+
+    fn parse_if(&mut self) -> Result<Expr, ParseError> {
+        let expr = self.parse_or()?;
+        if let Some(_) = self.maybe(TokenType::Que) {
+            let then = self.parse_if()?;
+            self.expect(TokenType::Colon)?;
+            let otherwise = self.parse_if()?;
+            Ok(Expr::new(
+                expr.span + otherwise.span,
+                ExprKind::If {
+                    condition: Box::new(expr),
+                    branch_true: Box::new(then),
+                    branch_false: Box::new(otherwise),
                 },
             ))
         } else {
@@ -338,8 +372,70 @@ impl Parser {
                 },
             ))
         } else {
-            self.parse_primary()
+            self.parse_trail()
         }
+    }
+
+    fn parse_trail(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = self.parse_primary()?;
+        while let Some(tok) =
+            maybe_one_of!(self, TokenType::LParen, TokenType::LBrack, TokenType::Dot)
+        {
+            match tok.tty {
+                TokenType::LParen => {
+                    let mut arguments = Vec::<Expr>::new();
+                    loop {
+                        if let Ok(tok) = self.peek()
+                            && tok.tty == TokenType::RParen
+                        {
+                            break;
+                        }
+                        arguments.push(self.parse_expr()?);
+                        if self.maybe(TokenType::Comma).is_none() {
+                            break;
+                        }
+                    }
+                    let rparen = self.expect(TokenType::RParen)?;
+                    expr = Expr::new(
+                        expr.span + rparen.span,
+                        ExprKind::Call {
+                            value: Box::new(expr),
+                            arguments,
+                        },
+                    );
+                }
+                TokenType::LBrack => {
+                    let index = self.parse_expr()?;
+                    let rbrack = self.expect(TokenType::RBrack)?;
+                    expr = Expr::new(
+                        expr.span + rbrack.span,
+                        ExprKind::Index {
+                            value: Box::new(expr),
+                            index: Box::new(index),
+                        },
+                    )
+                }
+                TokenType::Dot => {
+                    let attr_token = self.advance()?;
+                    if let TokenType::Ident(attribute) = attr_token.tty {
+                        expr = Expr::new(
+                            expr.span + attr_token.span,
+                            ExprKind::Attribute {
+                                value: Box::new(expr),
+                                attribute,
+                            },
+                        )
+                    } else {
+                        return Err(ParseError(
+                            attr_token.span,
+                            format!("Expected identifier, got {}", attr_token.tty),
+                        ));
+                    }
+                }
+                _ => unreachable!(),
+            };
+        }
+        Ok(expr)
     }
 
     fn parse_primary(&mut self) -> Result<Expr, ParseError> {
@@ -352,10 +448,11 @@ impl Parser {
             TokenType::None => Ok(Expr::new(token.span, ExprKind::None)),
             TokenType::String(s) => Ok(Expr::new(token.span, ExprKind::StringLiteral(s))),
             TokenType::LParen => {
-                let inner = self.parse_arrow()?;
+                let inner = self.parse_expr()?;
                 self.expect(TokenType::RParen)?;
                 Ok(inner)
             }
+            TokenType::Ident(s) => Ok(Expr::new(token.span, ExprKind::Variable(s))),
             _ => Err(ParseError(token.span, format!("Unexpected {}", token.tty))),
         }
     }
