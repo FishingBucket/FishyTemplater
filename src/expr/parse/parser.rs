@@ -2,7 +2,8 @@ use std::collections::VecDeque;
 
 use crate::expr::{
     ast::{BinOp, CompOp, Expr, ExprKind, UnOp},
-    parse::tokens::{Token, TokenType},
+    dice::ast::DiceSide,
+    parse::tokens::{IdentType, Token, TokenType},
     span::Span,
 };
 
@@ -70,23 +71,23 @@ impl Parser {
         Ok(self.tokens.pop_front().unwrap()) // unwrap here is safe
     }
 
-    fn expect(&mut self, tty: TokenType) -> Result<Token, ParseError> {
+    fn expect(&mut self, tty: TokenType, location: &'static str) -> Result<Token, ParseError> {
         let tok = self.advance()?;
         if tok.tty == tty {
             Ok(tok)
         } else {
             Err(ParseError(
                 tok.span,
-                format!("Expected {}, got {}", tty, tok.tty).to_string(),
+                format!("Expected {} {}, got {}", tty, location, tok.tty).to_string(),
             ))
         }
     }
 
     fn maybe(&mut self, tty: TokenType) -> Option<Token> {
-        let tok = self.peek().map_or(None, |v| Some(v));
+        let tok = self.peek().ok();
         if let Some(t) = tok {
             if t.tty == tty {
-                self.advance().map_or(None, |v| Some(v))
+                self.advance().ok()
             } else {
                 None
             }
@@ -94,23 +95,54 @@ impl Parser {
             None
         }
     }
-}
 
-macro_rules! expect_one_of {
-    ($self:tt, $($tty:path),*) => {{
-        let tok = $self.advance()?;
-        match &tok.tty {
-            $($tty)|* => Ok(tok),
-            _ => Err(ParseError(
-                tok.span,
-                format!(
-                    "Expected one of {}, got {}",
-                    vec![$(format!("{}", $tty)),*].join(", "),
-                    tok.tty,
-                )
-            ))
+    fn maybe_identifier(&mut self) -> Option<(String, Span)> {
+        let tok = self.peek().ok()?;
+        if let TokenType::Ident(_) = &tok.tty {
+            let tok = self.advance().ok()?;
+            match tok.tty {
+                TokenType::Ident(IdentType::Full(s)) => Some((s.to_string(), tok.span)),
+                TokenType::Ident(IdentType::Split(s)) => {
+                    let mut full = s.to_string();
+                    let mut span = tok.span;
+                    loop {
+                        let peek = self.peek().ok();
+                        if let Some(t) = peek
+                            && let TokenType::Ident(IdentType::Split(s)) = &t.tty
+                        {
+                            full += s;
+                            span = span + t.span;
+                            self.advance().ok()?;
+                        } else {
+                            break;
+                        }
+                    }
+                    Some((full, span))
+                }
+                _ => unreachable!(),
+            }
+        } else {
+            None
         }
-    }};
+    }
+
+    fn maybe_soft_keyword(&mut self, keyword: &'static str) -> Option<Token> {
+        let tok = self.peek().ok();
+        if let Some(t) = tok {
+            match &t.tty {
+                TokenType::Ident(IdentType::Full(s) | IdentType::Split(s)) => {
+                    if s == keyword {
+                        self.advance().ok()
+                    } else {
+                        None
+                    }
+                }
+                _ => None,
+            }
+        } else {
+            None
+        }
+    }
 }
 
 macro_rules! maybe_one_of {
@@ -118,7 +150,7 @@ macro_rules! maybe_one_of {
         let tok = $self.peek();
         if let Ok(t) = tok {
             match &t.tty {
-                $($tty)|* => $self.advance().map_or(None, |v| Some(v)),
+                $($tty)|* => $self.advance().ok(),
                 _ => None
             }
         } else {
@@ -158,7 +190,10 @@ impl Parser {
         let expr = self.parse_or()?;
         if let Some(_) = self.maybe(TokenType::Que) {
             let then = self.parse_if()?;
-            self.expect(TokenType::Colon)?;
+            self.expect(
+                TokenType::Colon,
+                "after the true branch of a ternary expression",
+            )?;
             let otherwise = self.parse_if()?;
             Ok(Expr::new(
                 expr.span + otherwise.span,
@@ -229,6 +264,7 @@ impl Parser {
             self,
             TokenType::Eqeq,
             TokenType::Neq,
+            TokenType::Neq2,
             TokenType::Lt,
             TokenType::Gt,
             TokenType::Leq,
@@ -240,6 +276,7 @@ impl Parser {
             let op = match tok.tty {
                 TokenType::Eqeq => CompOp::Equals,
                 TokenType::Neq => CompOp::NotEquals,
+                TokenType::Neq2 => CompOp::NotEquals,
                 TokenType::Gt => CompOp::Greater,
                 TokenType::Geq => CompOp::GreaterEquals,
                 TokenType::Lt => CompOp::Less,
@@ -377,7 +414,7 @@ impl Parser {
     }
 
     fn parse_trail(&mut self) -> Result<Expr, ParseError> {
-        let mut expr = self.parse_primary()?;
+        let mut expr = self.parse_dice()?;
         while let Some(tok) =
             maybe_one_of!(self, TokenType::LParen, TokenType::LBrack, TokenType::Dot)
         {
@@ -395,7 +432,8 @@ impl Parser {
                             break;
                         }
                     }
-                    let rparen = self.expect(TokenType::RParen)?;
+                    let rparen =
+                        self.expect(TokenType::RParen, "after the end of an argument list")?;
                     expr = Expr::new(
                         expr.span + rparen.span,
                         ExprKind::Call {
@@ -406,7 +444,7 @@ impl Parser {
                 }
                 TokenType::LBrack => {
                     let index = self.parse_expr()?;
-                    let rbrack = self.expect(TokenType::RBrack)?;
+                    let rbrack = self.expect(TokenType::RBrack, "after the end of an index")?;
                     expr = Expr::new(
                         expr.span + rbrack.span,
                         ExprKind::Index {
@@ -416,19 +454,23 @@ impl Parser {
                     )
                 }
                 TokenType::Dot => {
-                    let attr_token = self.advance()?;
-                    if let TokenType::Ident(attribute) = attr_token.tty {
+                    let attr_token = self.maybe_identifier();
+                    if let Some(string_span) = attr_token {
                         expr = Expr::new(
-                            expr.span + attr_token.span,
+                            expr.span + string_span.1,
                             ExprKind::Attribute {
                                 value: Box::new(expr),
-                                attribute,
+                                attribute: string_span.0,
                             },
                         )
                     } else {
+                        let tok = self.advance()?;
                         return Err(ParseError(
-                            attr_token.span,
-                            format!("Expected identifier, got {}", attr_token.tty),
+                            tok.span,
+                            format!(
+                                "Expected identifier after an attribute access, got {}",
+                                tok.tty
+                            ),
                         ));
                     }
                 }
@@ -438,7 +480,42 @@ impl Parser {
         Ok(expr)
     }
 
+    fn parse_dice(&mut self) -> Result<Expr, ParseError> {
+        let t = self.peek()?;
+        let mut count: Option<Expr>;
+        let mut do_dice = false;
+        if let Some(_) = self.maybe_soft_keyword("d") {
+            count = None;
+            do_dice = true;
+            self.advance();
+        } else {
+            count = Some(self.parse_primary()?);
+            if let Some(_) = self.maybe_soft_keyword("d") {
+                do_dice = true;
+                self.advance();
+            }
+        };
+        if do_dice {
+            let sides: DiceSide;
+            if let Some(_) = self.maybe(TokenType::Mod) {
+                sides = DiceSide::Percent;
+            } else {
+                sides = DiceSide::Expr(Box::new(self.parse_primary()?));
+            }
+            Ok(count.unwrap())
+        } else {
+            Ok(count.unwrap()) // safe to to unwrap
+        }
+    }
+
     fn parse_primary(&mut self) -> Result<Expr, ParseError> {
+        if let Some(string_span) = self.maybe_identifier() {
+            return Ok(Expr {
+                data: ExprKind::Variable(string_span.0),
+                span: string_span.1,
+            });
+        }
+
         let token = self.advance()?;
 
         match token.tty {
@@ -449,10 +526,9 @@ impl Parser {
             TokenType::String(s) => Ok(Expr::new(token.span, ExprKind::StringLiteral(s))),
             TokenType::LParen => {
                 let inner = self.parse_expr()?;
-                self.expect(TokenType::RParen)?;
+                self.expect(TokenType::RParen, "to close a grouping")?;
                 Ok(inner)
             }
-            TokenType::Ident(s) => Ok(Expr::new(token.span, ExprKind::Variable(s))),
             _ => Err(ParseError(token.span, format!("Unexpected {}", token.tty))),
         }
     }

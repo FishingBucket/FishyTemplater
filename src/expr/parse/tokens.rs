@@ -3,6 +3,12 @@ use std::fmt::Display;
 use crate::expr::span::Span;
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum IdentType {
+    Full(String),
+    Split(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
     EOF,
     Error(String),
@@ -22,6 +28,7 @@ pub enum TokenType {
     Gt,
     Geq,
     Neq,
+    Neq2,
 
     And,
     Or,
@@ -50,7 +57,7 @@ pub enum TokenType {
     Int(i64),
     Float(f64),
     String(String),
-    Ident(String),
+    Ident(IdentType),
 }
 
 impl Display for TokenType {
@@ -71,6 +78,7 @@ impl Display for TokenType {
             TokenType::Gt => write!(f, "'>'"),
             TokenType::Geq => write!(f, "'>='"),
             TokenType::Neq => write!(f, "'!='"),
+            TokenType::Neq2 => write!(f, "'<>'"),
             TokenType::And => write!(f, "'&&'"),
             TokenType::Or => write!(f, "'||'"),
             TokenType::Not => write!(f, "'!'"),
@@ -93,11 +101,13 @@ impl Display for TokenType {
             TokenType::Int(_) => write!(f, "int"),
             TokenType::Float(_) => write!(f, "float"),
             TokenType::String(_) => write!(f, "string"),
-            TokenType::Ident(_) => write!(f, "identifier"),
+            TokenType::Ident(IdentType::Full(s)) => write!(f, "full identifier {}", s),
+            TokenType::Ident(IdentType::Split(s)) => write!(f, "split identifier {}", s),
         }
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Token {
     pub tty: TokenType,
     pub span: Span,

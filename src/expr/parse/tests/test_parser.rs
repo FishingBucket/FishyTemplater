@@ -57,6 +57,17 @@ fn parse_basic_atoms() {
 }
 
 #[test]
+fn test_ident() {
+    assert_struct!(
+        parse("dl_link"),
+        Ok(Expr {
+            data: ExprKind::Variable("dl_link"),
+            ..
+        })
+    )
+}
+
+#[test]
 fn parse_operations() {
     assert_struct!(
         parse("3 + +8"),
@@ -229,7 +240,53 @@ fn test_ternary() {
             },
             ..
         })
-    )
+    );
+    assert_struct!(
+        parse("true ? true ? true : false : true ? true : false"),
+        Ok(Expr {
+            data: ExprKind::If {
+                *condition: Expr {
+                    data: ExprKind::BoolLiteral(true),
+                    ..
+                },
+                *branch_true: Expr {
+                    data: ExprKind::If {
+                        *condition: Expr {
+                            data: ExprKind::BoolLiteral(true),
+                            ..
+                        },
+                        *branch_true: Expr {
+                            data: ExprKind::BoolLiteral(true),
+                            ..
+                        },
+                        *branch_false: Expr {
+                            data: ExprKind::BoolLiteral(false),
+                            ..
+                        }
+                    },
+                    ..
+                },
+                *branch_false: Expr {
+                    data: ExprKind::If {
+                        *condition: Expr {
+                            data: ExprKind::BoolLiteral(true),
+                            ..
+                        },
+                        *branch_true: Expr {
+                            data: ExprKind::BoolLiteral(true),
+                            ..
+                        },
+                        *branch_false: Expr {
+                            data: ExprKind::BoolLiteral(false),
+                            ..
+                        }
+                    },
+                    ..
+                }
+            },
+            ..
+        })
+    );
 }
 
 #[test]

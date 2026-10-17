@@ -1,3 +1,5 @@
+use crate::expr::dice::ast::Dice;
+
 use super::span::Span;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -88,8 +90,5 @@ pub enum ExprKind {
         predicate: Box<Expr>,
         then: Vec<Expr>,
     },
-    Dice {
-        count: Box<Expr>,
-        side: Box<Expr>,
-    },
+    Dice(Dice),
 }

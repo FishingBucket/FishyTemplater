@@ -1,5 +1,5 @@
 use crate::expr::{
-    parse::tokens::{Token, TokenType},
+    parse::tokens::{IdentType, Token, TokenType},
     span::Span,
 };
 
@@ -8,7 +8,12 @@ pub struct Lexer {
     index: usize,
     code: Vec<char>,
     tokens: Vec<Token>,
+    next_ident_split: bool,
 }
+
+const SOFT_RESERVED_NAMES: &[&'static str] = &[
+    "dl", "dh", "kl", "kh", "ro", "uo", "cs", "cf", "sa", "sd", "s", "d", "k", "r", "u", "p", "f",
+]; // please sort this by length descending
 
 impl Lexer {
     pub fn new(code: &String) -> Lexer {
@@ -17,6 +22,7 @@ impl Lexer {
             index: 0,
             code: code.chars().collect(),
             tokens: Vec::with_capacity(10), // should be enough for most uses
+            next_ident_split: false,
         }
     }
 
@@ -66,6 +72,7 @@ impl Lexer {
             tty,
             span: Span::new(self.pass_start, self.index),
         });
+        self.next_ident_split = false;
         true
     }
 
@@ -221,6 +228,11 @@ impl Lexer {
                         self.advance(); // <
                         self.advance(); // =
                         self.add_token(TokenType::Leq)
+                    }
+                    Some('>') => {
+                        self.advance(); // <
+                        self.advance(); // >
+                        self.add_token(TokenType::Neq2)
                     }
                     _ => {
                         self.advance();
@@ -393,7 +405,64 @@ impl Lexer {
         } else if s == "in" {
             self.add_token(TokenType::In);
         } else {
-            self.add_token(TokenType::Ident(s));
+            // Dear God, I've come to repent my sins
+            // Let your blood wash me clean for I'm
+            // I'm, I'm, I'm a rotten girl
+            let do_match = self.try_match_soft_keyword(s.to_string());
+            if !do_match {
+                self.add_token(TokenType::Ident(if self.next_ident_split {
+                    IdentType::Split(s)
+                } else {
+                    IdentType::Full(s)
+                }));
+            };
         }
+    }
+
+    fn try_match_soft_keyword(&mut self, ident: String) -> bool {
+        // fuckery time
+        let mut max_run_pure_lowercase_section = String::with_capacity(ident.len());
+        for char in ident.chars() {
+            if 'a' <= char && char <= 'z' {
+                max_run_pure_lowercase_section.push(char);
+            } else {
+                break;
+            }
+        }
+        // analysis of soft keywords
+        let mut segments = Vec::<(String, Span)>::with_capacity(2);
+        let mut processed = 0usize;
+        while processed < max_run_pure_lowercase_section.len() {
+            let mut option_found_reserved_name: Option<&'static str> = None;
+            for reserved in SOFT_RESERVED_NAMES {
+                if max_run_pure_lowercase_section[processed..].starts_with(reserved) {
+                    option_found_reserved_name = Some(reserved);
+                    break;
+                }
+            }
+            if let Some(found_reserved_name) = option_found_reserved_name {
+                let before = processed;
+                processed += found_reserved_name.len();
+                segments.push((
+                    found_reserved_name.to_string(),
+                    Span::new(self.pass_start + before, self.pass_start + processed),
+                ));
+            } else {
+                break;
+            }
+        }
+
+        for (segment, span) in segments {
+            self.tokens.push(Token {
+                tty: TokenType::Ident(IdentType::Split(segment)),
+                span,
+            });
+        }
+
+        if processed != 0 {
+            self.index -= ident.len() - processed;
+            self.next_ident_split = true;
+        }
+        return processed != 0;
     }
 }
