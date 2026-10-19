@@ -3,11 +3,11 @@ use crate::expr::ast::{CompOp, Expr};
 #[derive(Debug, Clone, PartialEq)]
 pub enum DiceSide {
     Percent,
-    Expr(Box<Expr>),
+    Expr { expr: Box<Expr> },
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Sort {
+pub enum ModSort {
     Ascending,
     Descending,
 }
@@ -29,86 +29,110 @@ pub struct ModMax {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Explode {
+pub struct ModExplode {
     pub cp: Option<ComparePoint>,
     pub compound: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Penetrate {
+pub struct ModPenetrate {
     pub cp: Option<ComparePoint>,
     pub compound: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Reroll {
+pub struct ModReroll {
     pub cp: Option<ComparePoint>,
     pub once: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Unique {
+pub struct ModUnique {
     pub cp: Option<ComparePoint>,
     pub once: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct KeepHigh {
+pub struct ModKeepHigh {
     pub number: Box<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct KeepLow {
+pub struct ModKeepLow {
     pub number: Box<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct DropHigh {
+pub struct ModDropHigh {
     pub number: Box<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct DropLow {
+pub struct ModDropLow {
     pub number: Box<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Success {
+pub struct ModSuccess {
     pub cp: ComparePoint,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Failure {
+pub struct ModFailure {
     pub cp: ComparePoint,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct CriticalSuccess {
+pub struct ModCriticalSuccess {
     pub cp: Option<ComparePoint>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct CriticalFailure {
+pub struct ModCriticalFailure {
     pub cp: Option<ComparePoint>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Dice {
-    count: Option<Box<Expr>>,
-    side: DiceSide,
-    min: Option<ModMin>,
-    max: Option<ModMax>,
-    explode: Option<Explode>,
-    penetrate: Option<Penetrate>,
-    reroll: Option<Reroll>,
-    unique: Option<Unique>,
-    keep_high: Option<KeepHigh>,
-    keep_low: Option<KeepLow>,
-    drop_high: Option<DropHigh>,
-    drop_low: Option<DropLow>,
-    success: Option<Success>,
-    failure: Option<Failure>,
-    critical_success: Option<CriticalSuccess>,
-    critical_failure: Option<CriticalFailure>,
-    sort: Option<Sort>,
+    pub count: Box<Option<Expr>>,
+    pub side: DiceSide,
+    pub min: Option<ModMin>,
+    pub max: Option<ModMax>,
+    pub explode: Option<ModExplode>,
+    pub penetrate: Option<ModPenetrate>,
+    pub reroll: Option<ModReroll>,
+    pub unique: Option<ModUnique>,
+    pub keep_high: Option<ModKeepHigh>,
+    pub keep_low: Option<ModKeepLow>,
+    pub drop_high: Option<ModDropHigh>,
+    pub drop_low: Option<ModDropLow>,
+    pub success: Option<ModSuccess>,
+    pub failure: Option<ModFailure>,
+    pub critical_success: Option<ModCriticalSuccess>,
+    pub critical_failure: Option<ModCriticalFailure>,
+    pub sort: Option<ModSort>,
+}
+
+impl Dice {
+    pub fn new(count: Option<Expr>, side: DiceSide) -> Dice {
+        Dice {
+            count: Box::new(count),
+            side,
+            min: None,
+            max: None,
+            explode: None,
+            penetrate: None,
+            reroll: None,
+            unique: None,
+            keep_high: None,
+            keep_low: None,
+            drop_high: None,
+            drop_low: None,
+            success: None,
+            failure: None,
+            critical_success: None,
+            critical_failure: None,
+            sort: None,
+        }
+    }
 }

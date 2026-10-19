@@ -12,7 +12,8 @@ pub struct Lexer {
 }
 
 const SOFT_RESERVED_NAMES: &[&'static str] = &[
-    "dl", "dh", "kl", "kh", "ro", "uo", "cs", "cf", "sa", "sd", "s", "d", "k", "r", "u", "p", "f",
+    "min", "max", "dl", "dh", "kl", "kh", "ro", "uo", "cs", "cf", "sa", "sd", "s", "d", "k", "r",
+    "u", "p", "f",
 ]; // please sort this by length descending
 
 impl Lexer {
@@ -431,21 +432,12 @@ impl Lexer {
 
     fn try_match_soft_keyword(&mut self, ident: String) -> bool {
         // fuckery time
-        let mut max_run_pure_lowercase_section = String::with_capacity(ident.len());
-        for char in ident.chars() {
-            if 'a' <= char && char <= 'z' {
-                max_run_pure_lowercase_section.push(char);
-            } else {
-                break;
-            }
-        }
-        // analysis of soft keywords
         let mut segments = Vec::<(String, Span)>::with_capacity(2);
         let mut processed = 0usize;
-        while processed < max_run_pure_lowercase_section.len() {
+        while processed < ident.len() {
             let mut option_found_reserved_name: Option<&'static str> = None;
             for reserved in SOFT_RESERVED_NAMES {
-                if max_run_pure_lowercase_section[processed..].starts_with(reserved) {
+                if ident[processed..].starts_with(reserved) {
                     option_found_reserved_name = Some(reserved);
                     break;
                 }

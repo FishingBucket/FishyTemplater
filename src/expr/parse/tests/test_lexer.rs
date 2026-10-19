@@ -169,5 +169,16 @@ fn dice() {
             TokenType::Ident(IdentType::Split("dl".to_string())),
             TokenType::EOF,
         ]
+    );
+    assert_eq!(
+        as_tt_list("4d6min3"),
+        vec![
+            TokenType::Int(4),
+            TokenType::Ident(IdentType::Split("d".to_string())),
+            TokenType::Int(6),
+            TokenType::Ident(IdentType::Split("min".to_string())),
+            TokenType::Int(3),
+            TokenType::EOF,
+        ]
     )
 }

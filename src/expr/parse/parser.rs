@@ -2,7 +2,10 @@ use std::collections::VecDeque;
 
 use crate::expr::{
     ast::{BinOp, CompOp, Expr, ExprKind, UnOp},
-    dice::ast::DiceSide,
+    dice::{
+        ast::DiceSide,
+        parser::{DiceParser, DiceParserNextState},
+    },
     parse::tokens::{IdentType, Token, TokenType},
     span::Span,
 };
@@ -13,7 +16,7 @@ pub struct Parser {
 }
 
 #[derive(Clone, Debug)]
-pub struct ParseError(Span, String);
+pub struct ParseError(pub Span, pub String);
 
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Parser {
@@ -481,28 +484,68 @@ impl Parser {
     }
 
     fn parse_dice(&mut self) -> Result<Expr, ParseError> {
-        let t = self.peek()?;
-        let mut count: Option<Expr>;
+        let count: Option<Expr>;
         let mut do_dice = false;
-        if let Some(_) = self.maybe_soft_keyword("d") {
+        let first_span: Span;
+        if let Some(kw) = self.maybe_soft_keyword("d") {
             count = None;
             do_dice = true;
-            self.advance();
+            first_span = kw.span;
         } else {
-            count = Some(self.parse_primary()?);
-            if let Some(_) = self.maybe_soft_keyword("d") {
+            let expr = self.parse_primary()?;
+            first_span = expr.span;
+            count = Some(expr);
+            if let Some(kw) = self.maybe_soft_keyword("d") {
                 do_dice = true;
-                self.advance();
             }
         };
         if do_dice {
             let sides: DiceSide;
-            if let Some(_) = self.maybe(TokenType::Mod) {
+            let mut last_span;
+            if let Some(t) = self.maybe(TokenType::Mod) {
                 sides = DiceSide::Percent;
+                last_span = t.span;
             } else {
-                sides = DiceSide::Expr(Box::new(self.parse_primary()?));
+                let expr = self.parse_primary()?;
+                last_span = expr.span;
+                sides = DiceSide::Expr {
+                    expr: Box::new(expr),
+                };
             }
-            Ok(count.unwrap())
+            let mut parser = DiceParser::new(count, sides);
+            if let Ok(tok) = self.peek() {
+                println!("{}", tok);
+                last_span = tok.span;
+                loop {
+                    if let Ok(next) = self.peek() {
+                        let next_state = parser.in_token(next)?;
+                        match next_state {
+                            DiceParserNextState::Quit => {
+                                break;
+                            }
+                            DiceParserNextState::Advance => {
+                                last_span = self.advance()?.span;
+                            }
+                            DiceParserNextState::AdvanceNextExprIn => {
+                                self.advance()?;
+                                let expr = self.parse_primary()?;
+                                last_span = expr.span;
+                                let next_state = parser.in_expr(expr)?;
+                                println!("{:?}", next_state);
+                                if next_state == DiceParserNextState::Quit {
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        break;
+                    }
+                }
+            }
+            Ok(Expr::new(
+                first_span + last_span,
+                ExprKind::Dice(parser.get_dice()),
+            ))
         } else {
             Ok(count.unwrap()) // safe to to unwrap
         }
