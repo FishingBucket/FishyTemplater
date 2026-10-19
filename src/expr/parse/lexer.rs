@@ -149,10 +149,6 @@ impl Lexer {
                     self.advance();
                     self.add_token(TokenType::Que)
                 }
-                ':' => {
-                    self.advance();
-                    self.add_token(TokenType::Colon)
-                }
                 '.' => {
                     self.advance();
                     self.add_token(TokenType::Dot)
@@ -210,7 +206,21 @@ impl Lexer {
                         self.advance(); // =
                         self.add_token(TokenType::Eqeq)
                     }
-                    _ => false,
+                    _ => {
+                        self.advance(); // =
+                        self.add_token(TokenType::Eq)
+                    }
+                },
+                ':' => match self.lookahead(1) {
+                    Some('=') => {
+                        self.advance(); // :
+                        self.advance(); // =
+                        self.add_token(TokenType::Walrus)
+                    }
+                    _ => {
+                        self.advance(); // :
+                        self.add_token(TokenType::Colon)
+                    }
                 },
                 '>' => match self.lookahead(1) {
                     Some('=') => {

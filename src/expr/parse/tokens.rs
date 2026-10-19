@@ -22,6 +22,7 @@ pub enum TokenType {
     Que,
     Colon,
 
+    Eq,
     Eqeq,
     Lt,
     Leq,
@@ -29,6 +30,8 @@ pub enum TokenType {
     Geq,
     Neq,
     Neq2,
+
+    Walrus,
 
     And,
     Or,
@@ -72,6 +75,7 @@ impl Display for TokenType {
             TokenType::Mod => write!(f, "'%'"),
             TokenType::Que => write!(f, "'?'"),
             TokenType::Colon => write!(f, "':'"),
+            TokenType::Eq => write!(f, "'='"),
             TokenType::Eqeq => write!(f, "'=='"),
             TokenType::Lt => write!(f, "'<'"),
             TokenType::Leq => write!(f, "'<='"),
@@ -79,6 +83,7 @@ impl Display for TokenType {
             TokenType::Geq => write!(f, "'>='"),
             TokenType::Neq => write!(f, "'!='"),
             TokenType::Neq2 => write!(f, "'<>'"),
+            TokenType::Walrus => write!(f, "':='"),
             TokenType::And => write!(f, "'&&'"),
             TokenType::Or => write!(f, "'||'"),
             TokenType::Not => write!(f, "'!'"),

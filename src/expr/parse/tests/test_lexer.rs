@@ -59,7 +59,7 @@ fn divide() {
 #[test]
 fn symbols() {
     assert_eq!(
-        as_tt_list("+ - * % / ? : == < <= >= > != <> () [] {} && || ! -> & | ~ ^ , ."),
+        as_tt_list("+ - * % / ? : == < <= >= > != <> () [] {} && || ! -> & | ~ ^ , . = :="),
         vec![
             TokenType::Plus,
             TokenType::Minus,
@@ -91,6 +91,8 @@ fn symbols() {
             TokenType::BinXor,
             TokenType::Comma,
             TokenType::Dot,
+            TokenType::Eq,
+            TokenType::Walrus,
             TokenType::EOF
         ]
     )
