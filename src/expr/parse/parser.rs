@@ -437,13 +437,24 @@ impl Parser {
                     }
                     let rparen =
                         self.expect(TokenType::RParen, "after the end of an argument list")?;
-                    expr = Expr::new(
-                        expr.span + rparen.span,
-                        ExprKind::Call {
-                            value: Box::new(expr),
-                            arguments,
-                        },
-                    );
+                    if let ExprKind::Attribute { value, attribute } = expr.data {
+                        expr = Expr::new(
+                            expr.span + rparen.span,
+                            ExprKind::MethodCall {
+                                this: value,
+                                method_name: attribute,
+                                arguments,
+                            },
+                        )
+                    } else {
+                        expr = Expr::new(
+                            expr.span + rparen.span,
+                            ExprKind::Call {
+                                value: Box::new(expr),
+                                arguments,
+                            },
+                        );
+                    }
                 }
                 TokenType::LBrack => {
                     let index = self.parse_expr()?;

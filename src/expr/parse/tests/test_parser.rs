@@ -18,7 +18,7 @@ fn parse(code: &'static str) -> Result<Expr, ParseError> {
 }
 
 #[test]
-fn parse_basic_atoms() {
+fn test_basic_atoms() {
     assert_struct!(
         parse("3.25"),
         Ok(Expr {
@@ -68,7 +68,7 @@ fn test_ident() {
 }
 
 #[test]
-fn parse_operations() {
+fn test_operations() {
     assert_struct!(
         parse("3 + +8"),
         Ok(Expr {
@@ -132,7 +132,7 @@ fn parse_operations() {
 }
 
 #[test]
-fn comparisons() {
+fn test_comparisons() {
     assert_struct!(
         parse("1 < 2"),
         Ok(Expr {
@@ -182,7 +182,7 @@ fn comparisons() {
 }
 
 #[test]
-fn arrow() {
+fn test_arrow() {
     assert_struct!(
         parse("true -> false -> \"hello\""),
         Ok(Expr {
@@ -388,26 +388,21 @@ fn test_trail() {
     assert_struct!(
         parse("'hello'[1].lower()"),
         Ok(Expr {
-            data: ExprKind::Call {
-                *value: Expr {
-                    data: ExprKind::Attribute {
+            data: ExprKind::MethodCall {
+                *this: Expr {
+                    data: ExprKind::Index {
                         *value: Expr {
-                            data: ExprKind::Index {
-                                *value: Expr {
-                                    data: ExprKind::StringLiteral("hello"),
-                                    ..
-                                },
-                                *index: Expr {
-                                    data: ExprKind::IntLiteral(1),
-                                    ..
-                                }
-                            },
+                            data: ExprKind::StringLiteral("hello"),
                             ..
                         },
-                        attribute: "lower"
+                        *index: Expr {
+                            data: ExprKind::IntLiteral(1),
+                            ..
+                        }
                     },
                     ..
                 },
+                method_name: "lower",
                 arguments: []
             },
             ..

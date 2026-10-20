@@ -81,6 +81,11 @@ pub enum ExprKind {
         value: Box<Expr>,
         arguments: Vec<Expr>,
     },
+    MethodCall {
+        this: Box<Expr>,
+        method_name: String,
+        arguments: Vec<Expr>,
+    },
     If {
         condition: Box<Expr>,
         branch_true: Box<Expr>,
