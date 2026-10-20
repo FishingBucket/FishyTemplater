@@ -14,7 +14,7 @@ fn parse(code: &'static str) -> Result<Expr, ParseError> {
     lexer.scan();
     let tokens = lexer.get_tokens();
     let mut parser = Parser::new(tokens);
-    parser.arrow()
+    parser.expr()
 }
 
 #[test]

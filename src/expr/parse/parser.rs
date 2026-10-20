@@ -32,12 +32,6 @@ impl Parser {
         Ok(expr)
     }
 
-    pub fn arrow(&mut self) -> Result<Expr, ParseError> {
-        let expr = self.parse_arrow()?;
-        self.check_end()?;
-        Ok(expr)
-    }
-
     fn check_end(&self) -> Result<(), ParseError> {
         if let Some(tok) = self.tokens.get(0)
             && tok.tty != TokenType::EOF
@@ -164,7 +158,7 @@ macro_rules! maybe_one_of {
 
 impl Parser {
     fn parse_expr(&mut self) -> Result<Expr, ParseError> {
-        self.parse_if()
+        self.parse_arrow()
     }
 
     fn parse_arrow(&mut self) -> Result<Expr, ParseError> {
