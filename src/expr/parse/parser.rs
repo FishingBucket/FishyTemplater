@@ -514,7 +514,6 @@ impl Parser {
             }
             let mut parser = DiceParser::new(count, sides);
             if let Ok(tok) = self.peek() {
-                println!("{}", tok);
                 last_span = tok.span;
                 loop {
                     if let Ok(next) = self.peek() {
@@ -531,7 +530,6 @@ impl Parser {
                                 let expr = self.parse_primary()?;
                                 last_span = expr.span;
                                 let next_state = parser.in_expr(expr)?;
-                                println!("{:?}", next_state);
                                 if next_state == DiceParserNextState::Quit {
                                     break;
                                 }

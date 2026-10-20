@@ -1,8 +1,10 @@
 use assert_struct::assert_struct;
 
 use crate::expr::{
-    ast::{Expr, ExprKind},
-    dice::ast::{Dice, DiceSide, ModCriticalSuccess, ModMin},
+    ast::{CompOp, Expr, ExprKind},
+    dice::ast::{
+        ComparePoint, Dice, DiceSide, ModCriticalSuccess, ModExplode, ModMin, ModReroll, ModSuccess,
+    },
     parse::{
         lexer::Lexer,
         parser::{ParseError, Parser},
@@ -116,6 +118,73 @@ fn test_simple_mods() {
                         }
                     }
                 ),
+                ..
+            }),
+            ..
+        })
+    );
+}
+
+#[test]
+fn test_cp() {
+    assert_struct!(
+        parse("4d6>3"),
+        Ok(Expr {
+            data: ExprKind::Dice(Dice {
+                *count: Some(Expr {
+                    data: ExprKind::IntLiteral(4),
+                    ..
+                }),
+                side: DiceSide::Expr {
+                    *expr: Expr {
+                        data: ExprKind::IntLiteral(6),
+                        ..
+                    }
+                },
+                success: Some(
+                    ModSuccess {
+                        cp: ComparePoint {
+                            operator: CompOp::Greater,
+                            *value: Expr {
+                                data: ExprKind::IntLiteral(3),
+                                ..
+                            }
+                        }
+                    }
+                ),
+                ..
+            }),
+            ..
+        })
+    );
+    assert_struct!(
+        parse("4d6!>=3r"),
+        Ok(Expr {
+            data: ExprKind::Dice(Dice {
+                *count: Some(Expr {
+                    data: ExprKind::IntLiteral(4),
+                    ..
+                }),
+                side: DiceSide::Expr {
+                    *expr: Expr {
+                        data: ExprKind::IntLiteral(6),
+                        ..
+                    }
+                },
+                explode: Some(ModExplode {
+                    cp: Some(ComparePoint {
+                        operator: CompOp::GreaterEquals,
+                        *value: Expr {
+                            data: ExprKind::IntLiteral(3),
+                            ..
+                        }
+                    }),
+                    compound: false,
+                }),
+                reroll: Some(ModReroll {
+                    cp: None,
+                    once: false,
+                }),
                 ..
             }),
             ..
