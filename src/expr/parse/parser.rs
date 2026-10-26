@@ -162,25 +162,18 @@ impl Parser {
     }
 
     fn parse_arrow(&mut self) -> Result<Expr, ParseError> {
-        let expr = self.parse_if()?;
-        let mut then = Vec::<Expr>::new();
-        let mut has = false;
+        let mut expr = self.parse_if()?;
         while let Some(_) = self.maybe(TokenType::Arrow) {
-            has = true;
             let right = self.parse_if()?;
-            then.push(right);
-        }
-        if has {
-            Ok(Expr::new(
-                expr.span + then.last().unwrap().span,
+            expr = Expr::new(
+                expr.span + right.span,
                 ExprKind::Arrow {
                     predicate: Box::new(expr),
-                    then,
+                    then: Box::new(right),
                 },
-            ))
-        } else {
-            Ok(expr)
+            );
         }
+        Ok(expr)
     }
 
     fn parse_if(&mut self) -> Result<Expr, ParseError> {
@@ -254,6 +247,7 @@ impl Parser {
 
     fn parse_compare(&mut self) -> Result<Expr, ParseError> {
         let expr = self.parse_bit_or()?;
+        let expr_span = expr.span;
         let mut has = false;
         let mut operators = Vec::<CompOp>::new();
         let mut values = Vec::<Expr>::new();
@@ -285,13 +279,10 @@ impl Parser {
             values.push(right);
         }
         if has {
+            values.insert(0, expr); // horrible.
             Ok(Expr::new(
-                expr.span + values.last().unwrap().span,
-                ExprKind::Compare {
-                    left: Box::new(expr),
-                    operators,
-                    values,
-                },
+                expr_span + values.last().unwrap().span,
+                ExprKind::Compare { operators, values },
             ))
         } else {
             Ok(expr)
@@ -440,6 +431,11 @@ impl Parser {
                                 arguments,
                             },
                         )
+                    } else if let ExprKind::Variable(name) = expr.data {
+                        expr = Expr::new(
+                            expr.span + rparen.span,
+                            ExprKind::NameCall { name, arguments },
+                        )
                     } else {
                         expr = Expr::new(
                             expr.span + rparen.span,
@@ -556,10 +552,7 @@ impl Parser {
 
     fn parse_primary(&mut self) -> Result<Expr, ParseError> {
         if let Some(string_span) = self.maybe_identifier() {
-            return Ok(Expr {
-                data: ExprKind::Variable(string_span.0),
-                span: string_span.1,
-            });
+            return Ok(Expr::new(string_span.1, ExprKind::Variable(string_span.0)));
         }
 
         let token = self.advance()?;

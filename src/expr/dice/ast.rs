@@ -19,76 +19,34 @@ pub struct ComparePoint {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ModMin {
-    pub min: Box<Expr>,
+pub struct ModMinMax {
+    pub target: Box<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ModMax {
-    pub max: Box<Expr>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ModExplode {
+pub struct ModExplodePenetrate {
     pub cp: Option<ComparePoint>,
     pub compound: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ModPenetrate {
-    pub cp: Option<ComparePoint>,
-    pub compound: bool,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ModReroll {
+pub struct ModRerollUnique {
     pub cp: Option<ComparePoint>,
     pub once: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ModUnique {
-    pub cp: Option<ComparePoint>,
-    pub once: bool,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ModKeepHigh {
+pub struct ModKeepDrop {
     pub number: Box<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ModKeepLow {
-    pub number: Box<Expr>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ModDropHigh {
-    pub number: Box<Expr>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ModDropLow {
-    pub number: Box<Expr>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ModSuccess {
+pub struct ModSuccessFail {
     pub cp: ComparePoint,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ModFailure {
-    pub cp: ComparePoint,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ModCriticalSuccess {
-    pub cp: Option<ComparePoint>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct ModCriticalFailure {
+pub struct ModCriticalSuccessFail {
     pub cp: Option<ComparePoint>,
 }
 
@@ -96,20 +54,20 @@ pub struct ModCriticalFailure {
 pub struct Dice {
     pub count: Box<Option<Expr>>,
     pub side: DiceSide,
-    pub min: Option<ModMin>,
-    pub max: Option<ModMax>,
-    pub explode: Option<ModExplode>,
-    pub penetrate: Option<ModPenetrate>,
-    pub reroll: Option<ModReroll>,
-    pub unique: Option<ModUnique>,
-    pub keep_high: Option<ModKeepHigh>,
-    pub keep_low: Option<ModKeepLow>,
-    pub drop_high: Option<ModDropHigh>,
-    pub drop_low: Option<ModDropLow>,
-    pub success: Option<ModSuccess>,
-    pub failure: Option<ModFailure>,
-    pub critical_success: Option<ModCriticalSuccess>,
-    pub critical_failure: Option<ModCriticalFailure>,
+    pub min: Option<ModMinMax>,
+    pub max: Option<ModMinMax>,
+    pub explode: Option<ModExplodePenetrate>,
+    pub penetrate: Option<ModExplodePenetrate>,
+    pub reroll: Option<ModRerollUnique>,
+    pub unique: Option<ModRerollUnique>,
+    pub keep_high: Option<ModKeepDrop>,
+    pub keep_low: Option<ModKeepDrop>,
+    pub drop_high: Option<ModKeepDrop>,
+    pub drop_low: Option<ModKeepDrop>,
+    pub success: Option<ModSuccessFail>,
+    pub failure: Option<ModSuccessFail>,
+    pub critical_success: Option<ModCriticalSuccessFail>,
+    pub critical_failure: Option<ModCriticalSuccessFail>,
     pub sort: Option<ModSort>,
 }
 

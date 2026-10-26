@@ -1,4 +1,6 @@
-use crate::expr::dice::ast::Dice;
+use std::fmt::Display;
+
+use crate::expr::{dice::ast::Dice, ty::types::Type};
 
 use super::span::Span;
 
@@ -16,6 +18,23 @@ pub enum BinOp {
     BinaryXor,
 }
 
+impl Display for BinOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BinOp::Add => write!(f, "+"),
+            BinOp::Subtract => write!(f, "-"),
+            BinOp::Times => write!(f, "*"),
+            BinOp::Divide => write!(f, "/"),
+            BinOp::Modulus => write!(f, "%"),
+            BinOp::And => write!(f, "&&"),
+            BinOp::Or => write!(f, "||"),
+            BinOp::BinaryAnd => write!(f, "&"),
+            BinOp::BinaryOr => write!(f, "|"),
+            BinOp::BinaryXor => write!(f, "^"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CompOp {
     Equals,
@@ -27,6 +46,36 @@ pub enum CompOp {
     In,
 }
 
+impl CompOp {
+    pub fn is_order(&self) -> bool {
+        match self {
+            CompOp::Greater | CompOp::GreaterEquals | CompOp::Less | CompOp::LessEquals => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_eq(&self) -> bool {
+        match self {
+            CompOp::Equals | CompOp::NotEquals => true,
+            _ => false,
+        }
+    }
+}
+
+impl Display for CompOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CompOp::Equals => write!(f, "=="),
+            CompOp::NotEquals => write!(f, "!="),
+            CompOp::Less => write!(f, "<"),
+            CompOp::LessEquals => write!(f, "<="),
+            CompOp::Greater => write!(f, ">"),
+            CompOp::GreaterEquals => write!(f, ">="),
+            CompOp::In => write!(f, "in"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum UnOp {
     Not,
@@ -35,15 +84,31 @@ pub enum UnOp {
     Positive,
 }
 
+impl Display for UnOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            UnOp::Not => write!(f, "!"),
+            UnOp::BinaryNot => write!(f, "~"),
+            UnOp::Negative => write!(f, "-"),
+            UnOp::Positive => write!(f, "+"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Expr {
     pub data: ExprKind,
     pub span: Span,
+    pub ty: Type,
 }
 
 impl Expr {
     pub fn new(span: Span, data: ExprKind) -> Expr {
-        Expr { data, span }
+        Expr {
+            data,
+            span,
+            ty: Type::Unknown,
+        }
     }
 }
 
@@ -61,7 +126,6 @@ pub enum ExprKind {
         right: Box<Expr>,
     },
     Compare {
-        left: Box<Expr>,
         operators: Vec<CompOp>,
         values: Vec<Expr>,
     },
@@ -76,6 +140,10 @@ pub enum ExprKind {
     Index {
         value: Box<Expr>,
         index: Box<Expr>,
+    },
+    NameCall {
+        name: String,
+        arguments: Vec<Expr>,
     },
     Call {
         value: Box<Expr>,
@@ -93,7 +161,7 @@ pub enum ExprKind {
     },
     Arrow {
         predicate: Box<Expr>,
-        then: Vec<Expr>,
+        then: Box<Expr>,
     },
     Dice(Dice),
 }

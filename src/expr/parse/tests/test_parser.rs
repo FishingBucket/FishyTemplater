@@ -137,12 +137,12 @@ fn test_comparisons() {
         parse("1 < 2"),
         Ok(Expr {
             data: ExprKind::Compare {
-                *left: Expr {
-                    data: ExprKind::IntLiteral(1),
-                    ..
-                },
                 operators: [CompOp::Less],
                 values: [
+                    Expr {
+                        data: ExprKind::IntLiteral(1),
+                        ..
+                    },
                     Expr {
                         data: ExprKind::IntLiteral(2),
                         ..
@@ -156,12 +156,12 @@ fn test_comparisons() {
         parse("1 < 2 < 3 >= 4"),
         Ok(Expr {
             data: ExprKind::Compare {
-                *left: Expr {
-                    data: ExprKind::IntLiteral(1),
-                    ..
-                },
                 operators: [CompOp::Less, CompOp::Less, CompOp::GreaterEquals],
                 values: [
+                    Expr {
+                        data: ExprKind::IntLiteral(1),
+                        ..
+                    },
                     Expr {
                         data: ExprKind::IntLiteral(2),
                         ..
@@ -188,19 +188,22 @@ fn test_arrow() {
         Ok(Expr {
             data: ExprKind::Arrow {
                 *predicate: Expr {
-                    data: ExprKind::BoolLiteral(true),
+                    data: ExprKind::Arrow {
+                        *predicate: Expr {
+                            data: ExprKind::BoolLiteral(true),
+                            ..
+                        },
+                        *then: Expr {
+                            data: ExprKind::BoolLiteral(false),
+                            ..
+                        }
+                    },
                     ..
                 },
-                then: [
-                    Expr {
-                        data: ExprKind::BoolLiteral(false),
-                        ..
-                    },
-                    Expr {
-                        data: ExprKind::StringLiteral("hello"),
-                        ..
-                    }
-                ]
+                *then: Expr {
+                    data: ExprKind::StringLiteral("hello"),
+                    ..
+                }
             },
             ..
         })
@@ -215,12 +218,12 @@ fn test_ternary() {
             data: ExprKind::If {
                 *condition: Expr {
                     data: ExprKind::Compare {
-                        *left: Expr {
-                            data: ExprKind::IntLiteral(1),
-                            ..
-                        },
                         operators: [CompOp::Equals],
                         values: [
+                            Expr {
+                                data: ExprKind::IntLiteral(1),
+                                ..
+                            },
                             Expr {
                                 data: ExprKind::IntLiteral(1),
                                 ..
@@ -294,11 +297,8 @@ fn test_call() {
     assert_struct!(
         parse("f(1, 2)"),
         Ok(Expr {
-            data: ExprKind::Call {
-                *value: Expr {
-                    data: ExprKind::Variable("f"),
-                    ..
-                },
+            data: ExprKind::NameCall {
+                name: "f",
                 arguments: [
                     Expr {
                         data: ExprKind::IntLiteral(1),
@@ -314,11 +314,11 @@ fn test_call() {
         })
     );
     assert_struct!(
-        parse("f(1,)"),
+        parse("0(1,)"),
         Ok(Expr {
             data: ExprKind::Call {
                 *value: Expr {
-                    data: ExprKind::Variable("f"),
+                    data: ExprKind::IntLiteral(0),
                     ..
                 },
                 arguments: [
@@ -334,11 +334,8 @@ fn test_call() {
     assert_struct!(
         parse("f()"),
         Ok(Expr {
-            data: ExprKind::Call {
-                *value: Expr {
-                    data: ExprKind::Variable("f"),
-                    ..
-                },
+            data: ExprKind::NameCall {
+                name: "f",
                 arguments: []
             },
             ..

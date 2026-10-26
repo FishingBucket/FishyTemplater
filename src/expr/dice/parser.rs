@@ -1,11 +1,7 @@
 use crate::expr::{
-    ast::{CompOp, Expr},
-    dice::ast::{
-        ComparePoint, Dice, DiceSide, ModCriticalFailure, ModCriticalSuccess, ModDropHigh,
-        ModDropLow, ModExplode, ModFailure, ModKeepHigh, ModKeepLow, ModMax, ModMin, ModPenetrate,
-        ModReroll, ModSort, ModSuccess, ModUnique,
-    },
-    parse::{
+    ast::{CompOp, Expr}, dice::ast::{
+        ComparePoint, Dice, DiceSide, ModCriticalSuccessFail, ModExplodePenetrate, ModKeepDrop, ModMinMax, ModRerollUnique, ModSort, ModSuccessFail
+    }, parse::{
         parser::ParseError,
         tokens::{IdentType, Token, TokenType},
     },
@@ -79,7 +75,7 @@ impl DiceParser {
                 }
                 "r" => {
                     self.state = DiceModState::Reroll;
-                    self.dice.reroll = Some(ModReroll {
+                    self.dice.reroll = Some(ModRerollUnique {
                         cp: None,
                         once: false,
                     });
@@ -87,7 +83,7 @@ impl DiceParser {
                 }
                 "ro" => {
                     self.state = DiceModState::RerollOnce;
-                    self.dice.reroll = Some(ModReroll {
+                    self.dice.reroll = Some(ModRerollUnique {
                         cp: None,
                         once: true,
                     });
@@ -95,7 +91,7 @@ impl DiceParser {
                 }
                 "u" => {
                     self.state = DiceModState::Unique;
-                    self.dice.unique = Some(ModUnique {
+                    self.dice.unique = Some(ModRerollUnique {
                         cp: None,
                         once: false,
                     });
@@ -103,7 +99,7 @@ impl DiceParser {
                 }
                 "uo" => {
                     self.state = DiceModState::UniqueOnce;
-                    self.dice.unique = Some(ModUnique {
+                    self.dice.unique = Some(ModRerollUnique {
                         cp: None,
                         once: true,
                     });
@@ -131,12 +127,12 @@ impl DiceParser {
                 }
                 "cs" => {
                     self.state = DiceModState::CriticalSuccess;
-                    self.dice.critical_success = Some(ModCriticalSuccess { cp: None });
+                    self.dice.critical_success = Some(ModCriticalSuccessFail { cp: None });
                     Ok(DiceParserNextState::Advance)
                 }
                 "cf" => {
                     self.state = DiceModState::CriticalFailure;
-                    self.dice.critical_failure = Some(ModCriticalFailure { cp: None });
+                    self.dice.critical_failure = Some(ModCriticalSuccessFail { cp: None });
                     Ok(DiceParserNextState::Advance)
                 }
                 "s" => {
@@ -158,7 +154,7 @@ impl DiceParser {
                     if self.state == DiceModState::Bang {
                         self.state = DiceModState::BangP;
                         self.dice.explode = None;
-                        self.dice.penetrate = Some(ModPenetrate {
+                        self.dice.penetrate = Some(ModExplodePenetrate {
                             cp: None,
                             compound: false,
                         });
@@ -166,7 +162,7 @@ impl DiceParser {
                     } else if self.state == DiceModState::BangBang {
                         self.state = DiceModState::BangBangP;
                         self.dice.explode = None;
-                        self.dice.penetrate = Some(ModPenetrate {
+                        self.dice.penetrate = Some(ModExplodePenetrate {
                             cp: None,
                             compound: true,
                         });
@@ -179,14 +175,14 @@ impl DiceParser {
             }
         } else if token.tty == TokenType::Not {
             if self.state == DiceModState::Bang {
-                self.dice.explode = Some(ModExplode {
+                self.dice.explode = Some(ModExplodePenetrate {
                     cp: None,
                     compound: true,
                 });
                 self.state = DiceModState::BangBang;
                 Ok(DiceParserNextState::Advance)
             } else {
-                self.dice.explode = Some(ModExplode {
+                self.dice.explode = Some(ModExplodePenetrate {
                     cp: None,
                     compound: false,
                 });
@@ -210,93 +206,93 @@ impl DiceParser {
 
     pub fn in_expr(&mut self, expr: Expr) -> Result<DiceParserNextState, ParseError> {
         match self.state {
-            DiceModState::None => self.dice.success = Some(ModSuccess { cp: self.cp(expr)? }),
+            DiceModState::None => self.dice.success = Some(ModSuccessFail { cp: self.cp(expr)? }),
             DiceModState::Min => {
-                self.dice.min = Some(ModMin {
-                    min: Box::new(expr),
+                self.dice.min = Some(ModMinMax {
+                    target: Box::new(expr),
                 })
             }
             DiceModState::Max => {
-                self.dice.max = Some(ModMax {
-                    max: Box::new(expr),
+                self.dice.max = Some(ModMinMax {
+                    target: Box::new(expr),
                 })
             }
             DiceModState::Bang => {
-                self.dice.explode = Some(ModExplode {
+                self.dice.explode = Some(ModExplodePenetrate {
                     cp: Some(self.cp(expr)?),
                     compound: false,
                 })
             }
             DiceModState::BangBang => {
-                self.dice.explode = Some(ModExplode {
+                self.dice.explode = Some(ModExplodePenetrate {
                     cp: Some(self.cp(expr)?),
                     compound: true,
                 })
             }
             DiceModState::BangP => {
-                self.dice.penetrate = Some(ModPenetrate {
+                self.dice.penetrate = Some(ModExplodePenetrate {
                     cp: Some(self.cp(expr)?),
                     compound: false,
                 })
             }
             DiceModState::BangBangP => {
-                self.dice.penetrate = Some(ModPenetrate {
+                self.dice.penetrate = Some(ModExplodePenetrate {
                     cp: Some(self.cp(expr)?),
                     compound: true,
                 })
             }
             DiceModState::Reroll => {
-                self.dice.reroll = Some(ModReroll {
+                self.dice.reroll = Some(ModRerollUnique {
                     cp: Some(self.cp(expr)?),
                     once: false,
                 })
             }
             DiceModState::RerollOnce => {
-                self.dice.reroll = Some(ModReroll {
+                self.dice.reroll = Some(ModRerollUnique {
                     cp: Some(self.cp(expr)?),
                     once: true,
                 })
             }
             DiceModState::Unique => {
-                self.dice.unique = Some(ModUnique {
+                self.dice.unique = Some(ModRerollUnique {
                     cp: Some(self.cp(expr)?),
                     once: false,
                 })
             }
             DiceModState::UniqueOnce => {
-                self.dice.unique = Some(ModUnique {
+                self.dice.unique = Some(ModRerollUnique {
                     cp: Some(self.cp(expr)?),
                     once: true,
                 })
             }
             DiceModState::KeepHigh => {
-                self.dice.keep_high = Some(ModKeepHigh {
+                self.dice.keep_high = Some(ModKeepDrop {
                     number: Box::new(expr),
                 })
             }
             DiceModState::KeepLow => {
-                self.dice.keep_low = Some(ModKeepLow {
+                self.dice.keep_low = Some(ModKeepDrop {
                     number: Box::new(expr),
                 })
             }
             DiceModState::DropLow => {
-                self.dice.drop_low = Some(ModDropLow {
+                self.dice.drop_low = Some(ModKeepDrop {
                     number: Box::new(expr),
                 })
             }
             DiceModState::DropHigh => {
-                self.dice.drop_high = Some(ModDropHigh {
+                self.dice.drop_high = Some(ModKeepDrop {
                     number: Box::new(expr),
                 })
             }
-            DiceModState::Fail => self.dice.failure = Some(ModFailure { cp: self.cp(expr)? }),
+            DiceModState::Fail => self.dice.failure = Some(ModSuccessFail { cp: self.cp(expr)? }),
             DiceModState::CriticalSuccess => {
-                self.dice.critical_success = Some(ModCriticalSuccess {
+                self.dice.critical_success = Some(ModCriticalSuccessFail {
                     cp: Some(self.cp(expr)?),
                 })
             }
             DiceModState::CriticalFailure => {
-                self.dice.critical_failure = Some(ModCriticalFailure {
+                self.dice.critical_failure = Some(ModCriticalSuccessFail {
                     cp: Some(self.cp(expr)?),
                 })
             }

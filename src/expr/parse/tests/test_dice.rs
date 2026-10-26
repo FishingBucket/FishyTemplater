@@ -3,7 +3,8 @@ use assert_struct::assert_struct;
 use crate::expr::{
     ast::{CompOp, Expr, ExprKind},
     dice::ast::{
-        ComparePoint, Dice, DiceSide, ModCriticalSuccess, ModExplode, ModMin, ModReroll, ModSuccess,
+        ComparePoint, Dice, DiceSide, ModCriticalSuccessFail, ModExplodePenetrate, ModMinMax,
+        ModRerollUnique, ModSuccessFail,
     },
     parse::{
         lexer::Lexer,
@@ -87,7 +88,7 @@ fn test_simple_mods() {
                     }
                 },
                 critical_success: Some(
-                    ModCriticalSuccess {
+                    ModCriticalSuccessFail {
                         cp: None
                     }
                 ),
@@ -111,8 +112,8 @@ fn test_simple_mods() {
                     }
                 },
                 min: Some(
-                    ModMin {
-                        *min: Expr {
+                    ModMinMax {
+                        *target: Expr {
                             data: ExprKind::IntLiteral(5),
                             ..
                         }
@@ -142,7 +143,7 @@ fn test_cp() {
                     }
                 },
                 success: Some(
-                    ModSuccess {
+                    ModSuccessFail {
                         cp: ComparePoint {
                             operator: CompOp::Greater,
                             *value: Expr {
@@ -171,7 +172,7 @@ fn test_cp() {
                         ..
                     }
                 },
-                explode: Some(ModExplode {
+                explode: Some(ModExplodePenetrate {
                     cp: Some(ComparePoint {
                         operator: CompOp::GreaterEquals,
                         *value: Expr {
@@ -181,7 +182,7 @@ fn test_cp() {
                     }),
                     compound: false,
                 }),
-                reroll: Some(ModReroll {
+                reroll: Some(ModRerollUnique {
                     cp: None,
                     once: false,
                 }),
