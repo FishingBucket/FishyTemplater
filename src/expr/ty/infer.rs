@@ -200,8 +200,7 @@ pub fn infer_expression(
                         })
                     }
                     (BinOp::And | BinOp::Or, left_type, right_type)
-                        if left_type.subtypes(Type::Bool, types)
-                            && right_type.subtypes(Type::Bool, types) =>
+                        if left_type.is_bool() && right_type.is_bool() =>
                     {
                         Ok(Expr {
                             span: expr.span,
