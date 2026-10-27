@@ -1,15 +1,15 @@
 use std::collections::HashMap;
 
 use crate::expr::{
-    ast::{BinOp, Expr, ExprKind},
+    ast::Expr,
     parse::{
         lexer::Lexer,
         parser::{ParseError, Parser},
     },
     ty::{
         infer::{TypeError, infer_expression},
-        symbol::SymbolTable,
-        types::{Type, TypeTable},
+        symbol::{SymbolID, SymbolTable, SymbolType},
+        types::{ConcreteObjectType, Function, ParamType, Type, TypeID, TypeTable},
     },
 };
 
@@ -27,10 +27,58 @@ pub fn parse(code: &'static str) -> Result<Expr, Error> {
     let mut parser = Parser::new(tokens);
     let expr = parser.expr().map_err(|f| Error::ParseError(f))?;
     let types = TypeTable {
-        objects: HashMap::with_capacity(0),
+        objects: HashMap::from([(
+            TypeID(0),
+            ConcreteObjectType {
+                fields: HashMap::from([
+                    ("foo".to_string(), Type::Int),
+                    ("bar".to_string(), Type::List(Box::new(Type::Int))),
+                    ("recurse".to_string(), Type::Object(TypeID(0))),
+                ]),
+            },
+        )]),
     };
     let symbols = SymbolTable {
-        symbols: HashMap::with_capacity(0),
+        symbols: HashMap::from([
+            (SymbolID("n".to_string()), SymbolType::SingleType(Type::Int)),
+            (
+                SymbolID("my_list".to_string()),
+                SymbolType::SingleType(Type::List(Box::new(Type::Int))),
+            ),
+            (
+                SymbolID("object".to_string()),
+                SymbolType::SingleType(Type::Object(TypeID(0))),
+            ),
+            (
+                SymbolID("max".to_string()),
+                SymbolType::Overloaded(vec![
+                    Type::Function {
+                        name: "max".to_string(),
+                        func: Function {
+                            params: vec![ParamType::Var(Type::Int)],
+                            ret: Box::new(Type::Int),
+                        },
+                    },
+                    Type::Function {
+                        name: "max".to_string(),
+                        func: Function {
+                            params: vec![ParamType::Var(Type::Float)],
+                            ret: Box::new(Type::Float),
+                        },
+                    },
+                ]),
+            ),
+            (
+                SymbolID("first".to_string()),
+                SymbolType::SingleType(Type::Function {
+                    name: "first".to_string(),
+                    func: Function {
+                        params: vec![ParamType::One(Type::List(Box::new(Type::Int)))],
+                        ret: Box::new(Type::Int),
+                    },
+                }),
+            ),
+        ]),
     };
     let typed = infer_expression(expr, &types, &symbols).map_err(|f| Error::TypeError(f))?;
     Ok(typed)

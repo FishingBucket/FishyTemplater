@@ -1,7 +1,7 @@
 use assert_struct::assert_struct;
 
 use crate::expr::{
-    ast::{BinOp, Expr, ExprKind, UnOp},
+    ast::{BinOp, CompOp, Expr, ExprKind, UnOp},
     parse::{
         lexer::Lexer,
         parser::{ParseError, Parser},
@@ -146,11 +146,170 @@ fn test_binop() {
 #[test]
 fn test_unop() {
     assert_struct!(
-        parse("--1"),
+        parse("!(-1)"),
         Ok(Expr {
             data: ExprKind::UnOp {
-                operator: UnOp::Negative,
+                operator: UnOp::Not,
                 *value: Expr {
+                    data: ExprKind::UnOp {
+                        operator: UnOp::Negative,
+                        *value: Expr {
+                            data: ExprKind::IntLiteral(1),
+                            ty: Type::Int,
+                            ..
+                        }
+                    },
+                    ty: Type::Int,
+                    ..
+                }
+            },
+            ty: Type::Bool,
+            ..
+        })
+    );
+}
+
+#[test]
+fn test_compare() {
+    assert_struct!(
+        parse("1 < 2 < 3"),
+        Ok(Expr {
+            data: ExprKind::Compare {
+                operators: [CompOp::Less, CompOp::Less],
+                values: [
+                    Expr {
+                        data: ExprKind::IntLiteral(1),
+                        ty: Type::Int,
+                        ..
+                    },
+                    Expr {
+                        data: ExprKind::IntLiteral(2),
+                        ty: Type::Int,
+                        ..
+                    },
+                    Expr {
+                        data: ExprKind::IntLiteral(3),
+                        ty: Type::Int,
+                        ..
+                    }
+                ]
+            },
+            ty: Type::Bool,
+            ..
+        })
+    )
+}
+
+#[test]
+fn test_arrow() {
+    assert_struct!(
+        parse("1 -> 2"),
+        Ok(Expr {
+            data: ExprKind::Arrow {
+                *predicate: Expr {
+                    data: ExprKind::IntLiteral(1),
+                    ty: Type::Int,
+                    ..
+                },
+                *then: Expr {
+                    data: ExprKind::IntLiteral(2),
+                    ty: Type::Int,
+                    ..
+                }
+            },
+            ty: Type::Maybe {
+                *0: Type::Int
+            },
+            ..
+        })
+    );
+    assert_struct!(
+        parse("1 -> 2 -> 3"),
+        Ok(Expr {
+            data: ExprKind::Arrow {
+                *predicate: Expr {
+                    data: ExprKind::Arrow {
+                        *predicate: Expr {
+                            data: ExprKind::IntLiteral(1),
+                            ty: Type::Int,
+                            ..
+                        },
+                        *then: Expr {
+                            data: ExprKind::IntLiteral(2),
+                            ty: Type::Int,
+                            ..
+                        }
+                    },
+                    ty: Type::Maybe(
+                        *0: Type::Int
+                    ),
+                    ..
+                },
+                *then: Expr {
+                    data: ExprKind::IntLiteral(3),
+                    ty: Type::Int,
+                    ..
+                }
+            },
+            ty: Type::Maybe {
+                *0: Type::Int
+            },
+            ..
+        })
+    );
+    assert_struct!(
+        parse("1 -> (2 -> 3)"),
+        Ok(Expr {
+            data: ExprKind::Arrow {
+                *predicate: Expr {
+                    data: ExprKind::IntLiteral(1),
+                    ty: Type::Int,
+                    ..
+                },
+                *then: Expr {
+                    data: ExprKind::Arrow {
+                        *predicate: Expr {
+                            data: ExprKind::IntLiteral(2),
+                            ty: Type::Int,
+                            ..
+                        },
+                        *then: Expr {
+                            data: ExprKind::IntLiteral(3),
+                            ty: Type::Int,
+                            ..
+                        }
+                    },
+                    ty: Type::Maybe {
+                        *0: Type::Int
+                    },
+                    ..
+                }
+            },
+            ty: Type::Maybe {
+                *0: Type::Int
+            },
+            ..
+        })
+    );
+}
+
+#[test]
+fn test_if() {
+    assert_struct!(
+        parse("true ? 0 : -1"),
+        Ok(Expr {
+            data: ExprKind::If {
+                *condition: Expr {
+                    data: ExprKind::BoolLiteral(true),
+                    ty: Type::Bool,
+                    ..
+                },
+                *branch_true: Expr {
+                    data: ExprKind::IntLiteral(0),
+                    ty: Type::Int,
+                    ..
+                },
+                *branch_false: Expr {
                     data: ExprKind::UnOp {
                         operator: UnOp::Negative,
                         *value: Expr {
@@ -166,5 +325,5 @@ fn test_unop() {
             ty: Type::Int,
             ..
         })
-    );
+    )
 }

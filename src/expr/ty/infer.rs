@@ -47,7 +47,7 @@ fn infer_func_call(
             parameter_index += 1;
         }
     }
-    if parameter_index < func.params.len() {
+    if parameter_index < func.params.len() - 1 {
         return Err(format!(
             "expected {} arguments, got {}",
             func.params.len(),
@@ -71,7 +71,7 @@ fn infer_name_call_type(
             SymbolType::Overloaded(items) => {
                 for overload in items {
                     match overload {
-                        Type::Function { name, func } => {
+                        Type::Function { func, .. } => {
                             if let Ok(result_type) =
                                 infer_func_call(&func, &arguments, types, symbols)
                             {
