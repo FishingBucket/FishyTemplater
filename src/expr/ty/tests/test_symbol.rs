@@ -236,3 +236,88 @@ fn test_overload() {
         })
     );
 }
+
+#[test]
+fn test_walrus() {
+    assert_struct!(
+        parse("(x := 3) * 2"),
+        Ok(Expr {
+            data: ExprKind::BinOp {
+                *left: Expr {
+                    data: ExprKind::Walrus {
+                        variable: "x",
+                        *value: Expr {
+                            data: ExprKind::IntLiteral(3),
+                            ty: Type::Int,
+                            ..
+                        }
+                    },
+                    ty: Type::Int,
+                    ..
+                },
+                operator: BinOp::Times,
+                *right: Expr {
+                    data: ExprKind::IntLiteral(2),
+                    ty: Type::Int,
+                    ..
+                }
+            },
+            ty: Type::Int,
+            ..
+        })
+    );
+}
+
+#[test]
+fn test_if_walrus() {
+    assert_struct!(
+        parse("((n := n -> 4.0) ? n : 2.0) * n"),
+        Ok(Expr {
+            data: ExprKind::BinOp {
+                *left: Expr {
+                    data: ExprKind::IfWalrus {
+                        variable: "n",
+                        *condition: Expr {
+                            data: ExprKind::Arrow {
+                                *predicate: Expr {
+                                    data: ExprKind::Variable("n"),
+                                    ty: Type::Int,
+                                    ..
+                                },
+                                *then: Expr {
+                                    data: ExprKind::FloatLiteral(4.),
+                                    ty: Type::Float,
+                                    ..
+                                }
+                            },
+                            ty: Type::Maybe {
+                                *0: Type::Float
+                            },
+                            ..
+                        },
+                        *branch_true: Expr {
+                            data: ExprKind::Variable("n"),
+                            ty: Type::Float,
+                            ..
+                        },
+                        *branch_false: Expr {
+                            data: ExprKind::FloatLiteral(2.),
+                            ty: Type::Float,
+                            ..
+                        }
+                    },
+                    ty: Type::Float,
+                    ..
+                },
+                operator: BinOp::Times,
+                *right: Expr {
+                    data: ExprKind::Variable("n"),
+                    ty: Type::Int,
+                    ..
+                }
+            },
+            ty: Type::Float,
+            ..
+        })
+    );
+}

@@ -13,7 +13,7 @@ use crate::expr::{
 fn infer_cp(
     cp: ComparePoint,
     types: &TypeTable,
-    symbols: &SymbolTable,
+    symbols: &mut SymbolTable,
 ) -> Result<ComparePoint, TypeError> {
     let expr = infer_expression(*cp.value, types, symbols)?;
     match &expr.ty {
@@ -34,7 +34,7 @@ fn infer_cp(
 fn infer_min_max(
     minmax: ModMinMax,
     types: &TypeTable,
-    symbols: &SymbolTable,
+    symbols: &mut SymbolTable,
 ) -> Result<ModMinMax, TypeError> {
     let span = minmax.target.span;
     let typed = infer_expression(*minmax.target, types, symbols)?;
@@ -52,7 +52,7 @@ fn infer_min_max(
 fn infer_explode_penetrate(
     explode: ModExplodePenetrate,
     types: &TypeTable,
-    symbols: &SymbolTable,
+    symbols: &mut SymbolTable,
 ) -> Result<ModExplodePenetrate, TypeError> {
     match explode.cp {
         Some(cp) => Ok(ModExplodePenetrate {
@@ -69,7 +69,7 @@ fn infer_explode_penetrate(
 fn infer_reroll_unique(
     reroll: ModRerollUnique,
     types: &TypeTable,
-    symbols: &SymbolTable,
+    symbols: &mut SymbolTable,
 ) -> Result<ModRerollUnique, TypeError> {
     match reroll.cp {
         Some(cp) => Ok(ModRerollUnique {
@@ -86,7 +86,7 @@ fn infer_reroll_unique(
 fn infer_keep_drop(
     keep: ModKeepDrop,
     types: &TypeTable,
-    symbols: &SymbolTable,
+    symbols: &mut SymbolTable,
 ) -> Result<ModKeepDrop, TypeError> {
     let expr = infer_expression(*keep.number, types, symbols)?;
     match &expr.ty {
@@ -100,7 +100,11 @@ fn infer_keep_drop(
     }
 }
 
-pub fn infer_dice(dice: Dice, types: &TypeTable, symbols: &SymbolTable) -> Result<Dice, TypeError> {
+pub fn infer_dice(
+    dice: Dice,
+    types: &TypeTable,
+    symbols: &mut SymbolTable,
+) -> Result<Dice, TypeError> {
     let count = match *dice.count {
         Some(expr) => {
             let span = expr.span;

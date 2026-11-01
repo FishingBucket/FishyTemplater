@@ -159,9 +159,19 @@ pub enum ExprKind {
         branch_true: Box<Expr>,
         branch_false: Box<Expr>,
     },
+    IfWalrus {
+        variable: String,
+        condition: Box<Expr>,
+        branch_true: Box<Expr>,
+        branch_false: Box<Expr>,
+    },
     Arrow {
         predicate: Box<Expr>,
         then: Box<Expr>,
+    },
+    Walrus {
+        variable: String,
+        value: Box<Expr>,
     },
     Dice(Dice),
 }

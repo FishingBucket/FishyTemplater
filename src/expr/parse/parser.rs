@@ -185,14 +185,25 @@ impl Parser {
                 "after the true branch of a ternary expression",
             )?;
             let otherwise = self.parse_if()?;
-            Ok(Expr::new(
-                expr.span + otherwise.span,
-                ExprKind::If {
-                    condition: Box::new(expr),
-                    branch_true: Box::new(then),
-                    branch_false: Box::new(otherwise),
-                },
-            ))
+            match &expr.data {
+                ExprKind::Walrus { variable, value } => Ok(Expr::new(
+                    expr.span + otherwise.span,
+                    ExprKind::IfWalrus {
+                        variable: variable.to_string(),
+                        condition: value.clone(),
+                        branch_true: Box::new(then),
+                        branch_false: Box::new(otherwise),
+                    },
+                )),
+                _ => Ok(Expr::new(
+                    expr.span + otherwise.span,
+                    ExprKind::If {
+                        condition: Box::new(expr),
+                        branch_true: Box::new(then),
+                        branch_false: Box::new(otherwise),
+                    },
+                )),
+            }
         } else {
             Ok(expr)
         }
@@ -359,7 +370,7 @@ impl Parser {
     }
 
     fn parse_mult(&mut self) -> Result<Expr, ParseError> {
-        let mut expr = self.parse_un()?;
+        let mut expr = self.parse_walrus()?;
         while let Some(tok) = maybe_one_of!(self, TokenType::Star, TokenType::Div, TokenType::Mod) {
             let operator = match &tok.tty {
                 TokenType::Star => BinOp::Times,
@@ -367,7 +378,7 @@ impl Parser {
                 TokenType::Div => BinOp::Divide,
                 _ => unreachable!(),
             };
-            let right = self.parse_un()?;
+            let right = self.parse_walrus()?;
             expr = Expr::new(
                 expr.span + right.span,
                 ExprKind::BinOp {
@@ -378,6 +389,24 @@ impl Parser {
             );
         }
         Ok(expr)
+    }
+
+    fn parse_walrus(&mut self) -> Result<Expr, ParseError> {
+        let expr = self.parse_un()?;
+        if let ExprKind::Variable(variable) = &expr.data
+            && let Some(_) = self.maybe(TokenType::Walrus)
+        {
+            let value = self.parse_expr()?;
+            Ok(Expr::new(
+                expr.span + value.span,
+                ExprKind::Walrus {
+                    variable: variable.to_string(),
+                    value: Box::new(value),
+                },
+            ))
+        } else {
+            Ok(expr)
+        }
     }
 
     fn parse_un(&mut self) -> Result<Expr, ParseError> {

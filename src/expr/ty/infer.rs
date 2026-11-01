@@ -15,7 +15,6 @@ fn infer_func_call(
     func: &Function,
     arguments: &Vec<Expr>,
     types: &TypeTable,
-    _: &SymbolTable,
 ) -> Result<Type, String> {
     let argument_types = arguments
         .iter()
@@ -61,20 +60,18 @@ fn infer_name_call_type(
     name: String,
     arguments: &Vec<Expr>,
     types: &TypeTable,
-    symbols: &SymbolTable,
+    symbols: &mut SymbolTable,
 ) -> Result<Type, String> {
-    if let Some(variable) = symbols.get_type(SymbolID(name.clone())) {
+    if let Some(variable) = symbols.get_type(SymbolID(name.clone())).clone() {
         match variable {
             SymbolType::SingleType(Type::Function { name: _, func }) => {
-                infer_func_call(func, &arguments, types, symbols)
+                infer_func_call(func, &arguments, types)
             }
             SymbolType::Overloaded(items) => {
                 for overload in items {
                     match overload {
                         Type::Function { func, .. } => {
-                            if let Ok(result_type) =
-                                infer_func_call(&func, &arguments, types, symbols)
-                            {
+                            if let Ok(result_type) = infer_func_call(func, &arguments, types) {
                                 return Ok(result_type);
                             }
                         }
@@ -95,7 +92,7 @@ fn infer_name_call_type(
 pub fn infer_expression(
     expr: Expr,
     types: &TypeTable,
-    symbols: &SymbolTable,
+    symbols: &mut SymbolTable,
 ) -> Result<Expr, TypeError> {
     let mut expr = expr;
     match expr.data {
@@ -369,7 +366,7 @@ pub fn infer_expression(
             let inferred_call = infer_expression(*value, types, symbols)?;
             match &inferred_call.ty {
                 Type::Function { name, func } => {
-                    match infer_func_call(func, &typed_arguments, types, symbols) {
+                    match infer_func_call(func, &typed_arguments, types) {
                         Ok(ty) => Ok(Expr {
                             span: expr.span,
                             ty,
@@ -470,6 +467,70 @@ pub fn infer_expression(
                     format!(
                         "cannot interpret {} as a bool",
                         typed_predicate.ty.describe(types)
+                    ),
+                ))
+            }
+        }
+        ExprKind::Walrus { variable, value } => {
+            let typed_value = infer_expression(*value, types, symbols)?;
+            symbols.insert(
+                SymbolID(variable.to_string()),
+                SymbolType::SingleType(typed_value.ty.clone()),
+            );
+            Ok(Expr {
+                ty: typed_value.ty.clone(),
+                span: expr.span,
+                data: ExprKind::Walrus {
+                    variable,
+                    value: Box::new(typed_value),
+                },
+            })
+        }
+        ExprKind::IfWalrus {
+            variable,
+            condition,
+            branch_true,
+            branch_false,
+        } => {
+            let typed_condition = infer_expression(*condition, types, symbols)?;
+            if typed_condition.ty.is_bool() {
+                if let Type::Maybe(inner) = &typed_condition.ty {
+                    symbols.push_layer().insert(
+                        SymbolID(variable.to_string()),
+                        SymbolType::SingleType(*inner.clone()),
+                    );
+                }
+                let typed_then = infer_expression(*branch_true, types, symbols)?;
+                if let Type::Maybe(_) = &typed_condition.ty {
+                    symbols.pop_layer();
+                    symbols.push_layer().insert(
+                        SymbolID(variable.to_string()),
+                        SymbolType::SingleType(Type::None),
+                    );
+                }
+                let typed_else = infer_expression(*branch_false, types, symbols)?;
+                if let Type::Maybe(_) = &typed_condition.ty {
+                    symbols.pop_layer();
+                }
+                match Type::lub(&typed_then.ty, &typed_else.ty, types) {
+                    Ok(end) => Ok(Expr {
+                        span: expr.span,
+                        ty: end,
+                        data: ExprKind::IfWalrus {
+                            variable,
+                            condition: Box::new(typed_condition),
+                            branch_true: Box::new(typed_then),
+                            branch_false: Box::new(typed_else),
+                        },
+                    }),
+                    Err(message) => Err(TypeError(expr.span, message)),
+                }
+            } else {
+                Err(TypeError(
+                    expr.span,
+                    format!(
+                        "cannot interpret {} as a bool",
+                        typed_condition.ty.describe(types)
                     ),
                 ))
             }
