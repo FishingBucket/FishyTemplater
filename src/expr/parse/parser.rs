@@ -163,8 +163,8 @@ impl Parser {
 
     fn parse_arrow(&mut self) -> Result<Expr, ParseError> {
         let mut expr = self.parse_if()?;
-        while let Some(_) = self.maybe(TokenType::Arrow) {
-            let right = self.parse_if()?;
+        if let Some(_) = self.maybe(TokenType::Arrow) {
+            let right = self.parse_arrow()?;
             expr = Expr::new(
                 expr.span + right.span,
                 ExprKind::Arrow {

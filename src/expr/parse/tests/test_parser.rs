@@ -188,20 +188,20 @@ fn test_arrow() {
         Ok(Expr {
             data: ExprKind::Arrow {
                 *predicate: Expr {
-                    data: ExprKind::Arrow {
-                        *predicate: Expr {
-                            data: ExprKind::BoolLiteral(true),
-                            ..
-                        },
-                        *then: Expr {
-                            data: ExprKind::BoolLiteral(false),
-                            ..
-                        }
-                    },
+                    data: ExprKind::BoolLiteral(true),
                     ..
                 },
                 *then: Expr {
-                    data: ExprKind::StringLiteral("hello"),
+                    data: ExprKind::Arrow {
+                        *predicate: Expr {
+                            data: ExprKind::BoolLiteral(false),
+                            ..
+                        },
+                        *then: Expr {
+                            data: ExprKind::StringLiteral("hello"),
+                            ..
+                        }
+                    },
                     ..
                 }
             },

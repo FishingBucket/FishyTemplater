@@ -228,40 +228,6 @@ fn test_arrow() {
         Ok(Expr {
             data: ExprKind::Arrow {
                 *predicate: Expr {
-                    data: ExprKind::Arrow {
-                        *predicate: Expr {
-                            data: ExprKind::IntLiteral(1),
-                            ty: Type::Int,
-                            ..
-                        },
-                        *then: Expr {
-                            data: ExprKind::IntLiteral(2),
-                            ty: Type::Int,
-                            ..
-                        }
-                    },
-                    ty: Type::Maybe(
-                        *0: Type::Int
-                    ),
-                    ..
-                },
-                *then: Expr {
-                    data: ExprKind::IntLiteral(3),
-                    ty: Type::Int,
-                    ..
-                }
-            },
-            ty: Type::Maybe {
-                *0: Type::Int
-            },
-            ..
-        })
-    );
-    assert_struct!(
-        parse("1 -> (2 -> 3)"),
-        Ok(Expr {
-            data: ExprKind::Arrow {
-                *predicate: Expr {
                     data: ExprKind::IntLiteral(1),
                     ty: Type::Int,
                     ..
@@ -282,6 +248,40 @@ fn test_arrow() {
                     ty: Type::Maybe {
                         *0: Type::Int
                     },
+                    ..
+                }
+            },
+            ty: Type::Maybe {
+                *0: Type::Int
+            },
+            ..
+        })
+    );
+    assert_struct!(
+        parse("(1 -> 2) -> 3"),
+        Ok(Expr {
+            data: ExprKind::Arrow {
+                *predicate: Expr {
+                    data: ExprKind::Arrow {
+                        *predicate: Expr {
+                            data: ExprKind::IntLiteral(1),
+                            ty: Type::Int,
+                            ..
+                        },
+                        *then: Expr {
+                            data: ExprKind::IntLiteral(2),
+                            ty: Type::Int,
+                            ..
+                        }
+                    },
+                    ty: Type::Maybe {
+                        *0: Type::Int
+                    },
+                    ..
+                },
+                *then: Expr {
+                    data: ExprKind::IntLiteral(3),
+                    ty: Type::Int,
                     ..
                 }
             },
