@@ -169,6 +169,11 @@ pub enum ExprKind {
         predicate: Box<Expr>,
         then: Box<Expr>,
     },
+    ArrowWalrus {
+        variable: String,
+        predicate: Box<Expr>,
+        then: Box<Expr>,
+    },
     Walrus {
         variable: String,
         value: Box<Expr>,

@@ -406,3 +406,34 @@ fn test_trail() {
         })
     )
 }
+
+#[test]
+fn test_arrow_walrus() {
+    assert_struct!(
+        parse("x := maybe -> x + 1"),
+        Ok(Expr {
+            data: ExprKind::ArrowWalrus {
+                variable: "x",
+                *predicate: Expr {
+                    data: ExprKind::Variable("maybe"),
+                    ..
+                },
+                *then: Expr {
+                    data: ExprKind::BinOp {
+                        *left: Expr {
+                            data: ExprKind::Variable("x"),
+                            ..
+                        },
+                        operator: BinOp::Add,
+                        *right: Expr {
+                            data: ExprKind::IntLiteral(1),
+                            ..
+                        }
+                    },
+                    ..
+                }
+            },
+            ..
+        })
+    );
+}

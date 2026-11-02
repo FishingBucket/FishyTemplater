@@ -77,6 +77,10 @@ pub fn parse(code: &'static str) -> Result<Expr, Error> {
                 },
             }),
         ),
+        (
+            SymbolID("maybe".to_string()),
+            SymbolType::SingleType(Type::Maybe(Box::new(Type::Int))),
+        ),
     ]));
     let typed = infer_expression(expr, &types, &mut symbols).map_err(|f| Error::TypeError(f))?;
     Ok(typed)

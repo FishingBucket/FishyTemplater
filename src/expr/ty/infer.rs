@@ -535,6 +535,46 @@ pub fn infer_expression(
                 ))
             }
         }
+        ExprKind::ArrowWalrus {
+            variable,
+            predicate,
+            then,
+        } => {
+            let typed_predicate = infer_expression(*predicate, types, symbols)?;
+            if typed_predicate.ty.is_bool() {
+                if let Type::Maybe(inner) = &typed_predicate.ty {
+                    symbols.push_layer().insert(
+                        SymbolID(variable.to_string()),
+                        SymbolType::SingleType(*inner.clone()),
+                    );
+                }
+                let typed_inner = infer_expression(*then, types, symbols)?;
+                if let Type::Maybe(_) = &typed_predicate.ty {
+                    symbols.pop_layer();
+                }
+                Ok(Expr {
+                    ty: if let Type::Maybe(inner) = &typed_inner.ty {
+                        Type::Maybe(inner.clone())
+                    } else {
+                        Type::Maybe(Box::new(typed_inner.ty.clone()))
+                    },
+                    data: ExprKind::ArrowWalrus {
+                        variable,
+                        predicate: Box::new(typed_predicate),
+                        then: Box::new(typed_inner),
+                    },
+                    span: expr.span,
+                })
+            } else {
+                Err(TypeError(
+                    expr.span,
+                    format!(
+                        "cannot interpret {} as a bool",
+                        typed_predicate.ty.describe(types)
+                    ),
+                ))
+            }
+        }
         ExprKind::Dice(dice) => Ok(Expr {
             ty: Type::Int,
             span: expr.span,

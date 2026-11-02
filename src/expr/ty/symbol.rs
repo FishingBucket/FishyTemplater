@@ -30,6 +30,9 @@ impl SymbolTable {
                 if let Some(symbol_type) = hashmap.get(&sym) {
                     break Some(symbol_type);
                 } else {
+                    if index == 0 {
+                        break None;
+                    }
                     index -= 1;
                 }
             } else {

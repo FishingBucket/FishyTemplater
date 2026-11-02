@@ -162,18 +162,29 @@ impl Parser {
     }
 
     fn parse_arrow(&mut self) -> Result<Expr, ParseError> {
-        let mut expr = self.parse_if()?;
+        let expr = self.parse_if()?;
         if let Some(_) = self.maybe(TokenType::Arrow) {
             let right = self.parse_arrow()?;
-            expr = Expr::new(
-                expr.span + right.span,
-                ExprKind::Arrow {
-                    predicate: Box::new(expr),
-                    then: Box::new(right),
-                },
-            );
+            match &expr.data {
+                ExprKind::Walrus { variable, value } => Ok(Expr::new(
+                    expr.span + right.span,
+                    ExprKind::ArrowWalrus {
+                        variable: variable.to_string(),
+                        predicate: value.clone(),
+                        then: Box::new(right),
+                    },
+                )),
+                _ => Ok(Expr::new(
+                    expr.span + right.span,
+                    ExprKind::Arrow {
+                        predicate: Box::new(expr),
+                        then: Box::new(right),
+                    },
+                )),
+            }
+        } else {
+            Ok(expr)
         }
-        Ok(expr)
     }
 
     fn parse_if(&mut self) -> Result<Expr, ParseError> {
@@ -396,7 +407,7 @@ impl Parser {
         if let ExprKind::Variable(variable) = &expr.data
             && let Some(_) = self.maybe(TokenType::Walrus)
         {
-            let value = self.parse_expr()?;
+            let value = self.parse_bit_or()?;
             Ok(Expr::new(
                 expr.span + value.span,
                 ExprKind::Walrus {

@@ -21,6 +21,7 @@ use crate::expr::{
     max     : (...int) -> int
             | (...float) -> float
     first   : (int[]) -> int
+    maybe   : int?
 */
 
 #[test]
@@ -271,7 +272,7 @@ fn test_walrus() {
 #[test]
 fn test_if_walrus() {
     assert_struct!(
-        parse("((n := n -> 4.0) ? n : 2.0) * n"),
+        parse("(n := (n -> 4.0) ? n : 2.0) * n"),
         Ok(Expr {
             data: ExprKind::BinOp {
                 *left: Expr {
@@ -317,6 +318,46 @@ fn test_if_walrus() {
                 }
             },
             ty: Type::Float,
+            ..
+        })
+    );
+}
+
+#[test]
+fn test_arrow_walrus() {
+    assert_struct!(
+        parse("x := maybe -> x + 1"),
+        Ok(Expr {
+            data: ExprKind::ArrowWalrus {
+                variable: "x",
+                *predicate: Expr {
+                    data: ExprKind::Variable("maybe"),
+                    ty: Type::Maybe {
+                        *0: Type::Int
+                    },
+                    ..
+                },
+                *then: Expr {
+                    data: ExprKind::BinOp {
+                        *left: Expr {
+                            data: ExprKind::Variable("x"),
+                            ty: Type::Int,
+                            ..
+                        },
+                        operator: BinOp::Add,
+                        *right: Expr {
+                            data: ExprKind::IntLiteral(1),
+                            ty: Type::Int,
+                            ..
+                        }
+                    },
+                    ty: Type::Int,
+                    ..
+                }
+            },
+            ty: Type::Maybe {
+                *0: Type::Int
+            },
             ..
         })
     );
