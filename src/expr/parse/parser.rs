@@ -165,23 +165,13 @@ impl Parser {
         let expr = self.parse_if()?;
         if let Some(_) = self.maybe(TokenType::Arrow) {
             let right = self.parse_arrow()?;
-            match &expr.data {
-                ExprKind::Walrus { variable, value } => Ok(Expr::new(
-                    expr.span + right.span,
-                    ExprKind::ArrowWalrus {
-                        variable: variable.to_string(),
-                        predicate: value.clone(),
-                        then: Box::new(right),
-                    },
-                )),
-                _ => Ok(Expr::new(
-                    expr.span + right.span,
-                    ExprKind::Arrow {
-                        predicate: Box::new(expr),
-                        then: Box::new(right),
-                    },
-                )),
-            }
+            Ok(Expr::new(
+                expr.span + right.span,
+                ExprKind::Arrow {
+                    predicate: Box::new(expr),
+                    then: Box::new(right),
+                },
+            ))
         } else {
             Ok(expr)
         }
@@ -196,25 +186,14 @@ impl Parser {
                 "after the true branch of a ternary expression",
             )?;
             let otherwise = self.parse_if()?;
-            match &expr.data {
-                ExprKind::Walrus { variable, value } => Ok(Expr::new(
-                    expr.span + otherwise.span,
-                    ExprKind::IfWalrus {
-                        variable: variable.to_string(),
-                        condition: value.clone(),
-                        branch_true: Box::new(then),
-                        branch_false: Box::new(otherwise),
-                    },
-                )),
-                _ => Ok(Expr::new(
-                    expr.span + otherwise.span,
-                    ExprKind::If {
-                        condition: Box::new(expr),
-                        branch_true: Box::new(then),
-                        branch_false: Box::new(otherwise),
-                    },
-                )),
-            }
+            Ok(Expr::new(
+                expr.span + otherwise.span,
+                ExprKind::If {
+                    condition: Box::new(expr),
+                    branch_true: Box::new(then),
+                    branch_false: Box::new(otherwise),
+                },
+            ))
         } else {
             Ok(expr)
         }
