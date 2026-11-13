@@ -270,15 +270,15 @@ fn test_walrus() {
 }
 
 #[test]
-fn test_if_walrus() {
+fn test_type_narrowing() {
     assert_struct!(
-        parse("(n := (n -> 4.0) ? n : 2.0) * n"),
+        parse("n := (n -> 4.0) ? n : 2.0"),
         Ok(Expr {
-            data: ExprKind::BinOp {
-                *left: Expr {
-                    data: ExprKind::IfWalrus {
+            data: ExprKind::If {
+                *condition: Expr {
+                    data: ExprKind::Walrus {
                         variable: "n",
-                        *condition: Expr {
+                        *value: Expr {
                             data: ExprKind::Arrow {
                                 *predicate: Expr {
                                     data: ExprKind::Variable("n"),
@@ -289,31 +289,27 @@ fn test_if_walrus() {
                                     data: ExprKind::FloatLiteral(4.),
                                     ty: Type::Float,
                                     ..
-                                }
+                                },
                             },
                             ty: Type::Maybe {
                                 *0: Type::Float
                             },
                             ..
-                        },
-                        *branch_true: Expr {
-                            data: ExprKind::Variable("n"),
-                            ty: Type::Float,
-                            ..
-                        },
-                        *branch_false: Expr {
-                            data: ExprKind::FloatLiteral(2.),
-                            ty: Type::Float,
-                            ..
                         }
                     },
+                    ty: Type::Maybe {
+                        *0: Type::Float
+                    },
+                    ..
+                },
+                *branch_true: Expr {
+                    data: ExprKind::Variable("n"),
                     ty: Type::Float,
                     ..
                 },
-                operator: BinOp::Times,
-                *right: Expr {
-                    data: ExprKind::Variable("n"),
-                    ty: Type::Int,
+                *branch_false: Expr {
+                    data: ExprKind::FloatLiteral(2.),
+                    ty: Type::Float,
                     ..
                 }
             },
@@ -321,15 +317,11 @@ fn test_if_walrus() {
             ..
         })
     );
-}
 
-#[test]
-fn test_arrow_walrus() {
     assert_struct!(
-        parse("x := maybe -> x + 1"),
+        parse("maybe -> maybe + 1"),
         Ok(Expr {
-            data: ExprKind::ArrowWalrus {
-                variable: "x",
+            data: ExprKind::Arrow {
                 *predicate: Expr {
                     data: ExprKind::Variable("maybe"),
                     ty: Type::Maybe {
@@ -340,7 +332,7 @@ fn test_arrow_walrus() {
                 *then: Expr {
                     data: ExprKind::BinOp {
                         *left: Expr {
-                            data: ExprKind::Variable("x"),
+                            data: ExprKind::Variable("maybe"),
                             ty: Type::Int,
                             ..
                         },
@@ -358,6 +350,33 @@ fn test_arrow_walrus() {
             ty: Type::Maybe {
                 *0: Type::Int
             },
+            ..
+        })
+    );
+
+    assert_struct!(
+        parse("maybe ? maybe : 1"),
+        Ok(Expr {
+            data: ExprKind::If {
+                *condition: Expr {
+                    data: ExprKind::Variable("maybe"),
+                    ty: Type::Maybe {
+                        *0: Type::Int
+                    },
+                    ..
+                },
+                *branch_true: Expr {
+                    data: ExprKind::Variable("maybe"),
+                    ty: Type::Int,
+                    ..
+                },
+                *branch_false: Expr {
+                    data: ExprKind::IntLiteral(1),
+                    ty: Type::Int,
+                    ..
+                }
+            },
+            ty: Type::Int,
             ..
         })
     );

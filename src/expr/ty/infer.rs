@@ -3,6 +3,7 @@ use crate::expr::{
     span::Span,
     ty::{
         infer_dice::infer_dice,
+        narrow::{NarrowKind, narrow},
         symbol::{SymbolID, SymbolTable, SymbolType},
         types::{Function, ParamType, Type, TypeTable},
     },
@@ -421,8 +422,14 @@ pub fn infer_expression(
         } => {
             let typed_condition = infer_expression(*condition, types, symbols)?;
             if typed_condition.ty.is_bool() {
+                symbols.push_layer();
+                narrow(&typed_condition, types, symbols, NarrowKind::Truthy);
                 let typed_then = infer_expression(*branch_true, types, symbols)?;
+                symbols.pop_layer();
+                symbols.push_layer();
+                narrow(&typed_condition, types, symbols, NarrowKind::Falsy);
                 let typed_else = infer_expression(*branch_false, types, symbols)?;
+                symbols.pop_layer();
                 match Type::lub(&typed_then.ty, &typed_else.ty, types) {
                     Ok(end) => Ok(Expr {
                         span: expr.span,
@@ -448,7 +455,10 @@ pub fn infer_expression(
         ExprKind::Arrow { predicate, then } => {
             let typed_predicate = infer_expression(*predicate, types, symbols)?;
             if typed_predicate.ty.is_bool() {
+                symbols.push_layer();
+                narrow(&typed_predicate, types, symbols, NarrowKind::Truthy);
                 let typed_inner = infer_expression(*then, types, symbols)?;
+                symbols.pop_layer();
                 Ok(Expr {
                     ty: if let Type::Maybe(inner) = &typed_inner.ty {
                         Type::Maybe(inner.clone())
